@@ -1,0 +1,68 @@
+[gd_scene format=3 uid="uid://pfo1m1ud0227"]
+
+[ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
+[ext_resource type="PackedScene" path="res://scenes/target_circle.tscn" id="2_target"]
+[ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
+
+[node name="SharedCursorPrototype" type="Node2D" unique_id=1750839187]
+script = ExtResource("1_shared")
+
+[node name="Targets" type="Node2D" parent="." unique_id=832847295]
+
+[node name="Target1" parent="Targets" unique_id=1064801929 instance=ExtResource("2_target")]
+position = Vector2(250, 220)
+
+[node name="Target2" parent="Targets" unique_id=185791570 instance=ExtResource("2_target")]
+position = Vector2(605, 137)
+
+[node name="Target3" parent="Targets" unique_id=1372721760 instance=ExtResource("2_target")]
+position = Vector2(767, 349)
+
+[node name="Target4" parent="Targets" unique_id=755889019 instance=ExtResource("2_target")]
+position = Vector2(350, 435)
+
+[node name="Target5" parent="Targets" unique_id=1382404750 instance=ExtResource("2_target")]
+position = Vector2(541, 298)
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1273282158]
+
+[node name="TitleLabel" type="Label" parent="HUD" unique_id=529609257]
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 360.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(0.86, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Shared Cursor Prototype"
+
+[node name="ScoreLabel" type="Label" parent="HUD" unique_id=847284010]
+offset_left = 24.0
+offset_top = 54.0
+offset_right = 180.0
+offset_bottom = 82.0
+theme_override_colors/font_color = Color(0.72, 0.86, 0.94, 1)
+theme_override_font_sizes/font_size = 20
+text = "Score: 0"
+
+[node name="TargetLabel" type="Label" parent="HUD" unique_id=158256541]
+offset_left = 24.0
+offset_top = 82.0
+offset_right = 220.0
+offset_bottom = 110.0
+theme_override_colors/font_color = Color(0.72, 0.86, 0.94, 1)
+theme_override_font_sizes/font_size = 20
+text = "Targets: 0/5"
+
+[node name="EnergyDisplay" parent="HUD" unique_id=1635434377 instance=ExtResource("3_energy")]
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -245.0
+offset_top = -72.0
+offset_right = -25.0
+offset_bottom = -25.0
+grow_horizontal = 0
+grow_vertical = 0
