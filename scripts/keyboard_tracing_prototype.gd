@@ -2,6 +2,7 @@ extends Node2D
 
 #region constants
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
+const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 
 const VIEW_SIZE = Vector2(960, 640)
 const CURSOR_BOX_SIZE = 36.0
@@ -26,9 +27,11 @@ const TARGET_DONE_GLOW = Color(0.24, 1.0, 0.66, 0.18)
 const TARGET_DONE_RING = Color(0.86, 0.96, 1.0, 0.55)
 #endregion
 
-var cursor_position: Vector2 = VIEW_SIZE * 0.5
-var score: int = 0
-var energy: float = MAX_ENERGY
+var _cursor: Node2D
+# var _cursor_position: Vector2 = VIEW_SIZE * 0.5
+@export var score: int = 0
+@export var energy: float = MAX_ENERGY
+@export var completed_targets: int = 0
 var _laser_active: bool = false
 var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
@@ -37,24 +40,37 @@ var _current_line: Line2D = null
 #region onready
 @onready var _targets_root: Node2D = $Targets
 @onready var _lines: Node2D = $LaserLines
-@onready var _camera: Camera2D = $Camera2D
+# @onready var _camera: Camera2D = $Camera2D
 @onready var _score_label: Label = $HUD/ScoreLabel
 @onready var _target_label: Label = $HUD/TargetLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
 
-@onready var multiplayer_spawner: MultiplayerSpawner = $MultiplayerSpawner
+@onready var targets_spawner = $MultiplayerSpawner_targets
+@onready var cursor_spawner = $MultiplayerSpawner_cursor
 #endregion
 
 
 func _ready() -> void:
-	_camera.position = cursor_position
+	# _camera.position = _cursor_position
 	instantiate_targets()
 
-	
+	instantiate_cursor()
 	_update_hud()
 
 	_reset_targets()
+	cursor_spawner.spawned.connect(connect_cursor)
 
+func instantiate_cursor() -> void:
+	_cursor = CURSOR_SCENE.instantiate()
+	_cursor.position = VIEW_SIZE * 0.5
+	# _camera.position = _cursor_position
+	
+	get_tree().root.add_child(_cursor)
+
+func connect_cursor(node: Node) -> void:
+	print("Connecting cursor...")
+	_cursor = node
+	pass
 
 func instantiate_targets() -> void:
 	if not multiplayer.is_server():
@@ -63,6 +79,8 @@ func instantiate_targets() -> void:
 	_targets.clear()
 	for i in range(TARGET_COUNT):
 		var new_target = TARGET_SCENE.instantiate()
+		new_target.name = "Target_%d" % ResourceUID.create_id()
+		print("Instantiating target: %s" % new_target.name)
 		_targets_root.add_child(new_target)
 		_targets.append(new_target)
 	pass
@@ -72,9 +90,12 @@ func _process(delta: float) -> void:
 	_move_cursor(delta)
 
 	# camera position: handled by server
-	_camera.position = cursor_position
+	# _camera.position = _cursor_position
 
 	# game logic: handled by server
+	# TODO: properly check if one (or both) players are pressing
+	# the spacebar, then draw the laser for both clients
+	# 
 	_laser_active = Input.is_key_pressed(KEY_SPACE)
 
 	if _laser_active:
@@ -103,6 +124,7 @@ func _reset_targets() -> void:
 		return
 
 	_randomize_target_positions()
+	completed_targets = 0
 	for target in _targets:
 		_set_target_completed(target, false)
 
@@ -129,7 +151,7 @@ func _randomize_target_positions() -> void:
 
 # server only
 func _is_position_clear(candidate: Vector2, placed_positions: Array[Vector2]) -> bool:
-	var candidate_screen_position: Vector2 = candidate - _camera.position + VIEW_SIZE * 0.5
+	var candidate_screen_position: Vector2 = candidate - _cursor.position + VIEW_SIZE * 0.5
 	if _energy_display.get_global_rect().grow(TARGET_SPAWN_MARGIN).has_point(candidate_screen_position):
 		return false
 
@@ -141,8 +163,6 @@ func _is_position_clear(candidate: Vector2, placed_positions: Array[Vector2]) ->
 
 # server only?
 func _clear_laser_line() -> void:
-	if not multiplayer.is_server():
-		return
 	if _current_line == null:
 		return
 
@@ -159,7 +179,7 @@ func _check_target_hits() -> void:
 			continue
 
 		var target_radius: float = _get_target_radius(target)
-		var distance_to_target: float = cursor_position.distance_to(target.global_position)
+		var distance_to_target: float = _cursor.position.distance_to(target.global_position)
 		if distance_to_target <= LASER_RADIUS + target_radius:
 			_set_target_completed(target, true)
 
@@ -195,6 +215,8 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 	if ring != null:
 		ring.default_color = TARGET_DONE_RING if completed else TARGET_RED_RING
 
+	completed_targets += 1 if completed else 0
+
 # server only
 func _get_target_radius(target: Area2D) -> float:
 	for child in target.get_children():
@@ -210,24 +232,30 @@ func _get_target_radius(target: Area2D) -> float:
 
 # handle for each client
 # need to get score from server though
+@rpc("any_peer", "call_local")
 func _update_hud() -> void:
 	_score_label.text = "Score: %d" % score
-	_target_label.text = "Targets: %d/%d" % [_count_completed_targets(), _targets.size()]
+	_target_label.text = "Targets: %d/%d" % [completed_targets, TARGET_COUNT]
 	_energy_display.set_energy(energy, MAX_ENERGY)
 
 # server only
-func _count_completed_targets() -> int:
-	var completed_count: int = 0
-	for target in _targets:
-		if _is_target_completed(target):
-			completed_count += 1
-	return completed_count
+# func _count_completed_targets() -> int:
+# 	if not multiplayer.is_server():
+# 		return 0
+
+# 	completed_targets = 0
+# 	for target in _targets:
+# 		if _is_target_completed(target):
+# 			completed_targets += 1
+# 	return completed_targets
 #endregion
 
 
 #region rendering
 # rendering: handled by clients
 func _draw() -> void:
+	if _cursor == null:
+		return
 	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.015, 0.018, 0.032), true)
 	_draw_grid()
 	_draw_laser()
@@ -241,13 +269,13 @@ func _update_laser_line() -> void:
 		_current_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 		_current_line.end_cap_mode = Line2D.LINE_CAP_ROUND
 		_lines.add_child(_current_line)
-		_current_line.add_point(cursor_position)
+		_current_line.add_point(_cursor.position)
 		return
 
 	var last_point_index: int = _current_line.get_point_count() - 1
 	var last_point: Vector2 = _current_line.get_point_position(last_point_index)
-	if last_point.distance_to(cursor_position) >= LINE_POINT_MIN_DISTANCE:
-		_current_line.add_point(cursor_position)
+	if last_point.distance_to(_cursor.position) >= LINE_POINT_MIN_DISTANCE:
+		_current_line.add_point(_cursor.position)
 
 # rendering: handled by clients
 func _draw_grid() -> void:
@@ -262,18 +290,18 @@ func _draw_laser() -> void:
 	if not _laser_active:
 		return
 
-	draw_circle(cursor_position, LASER_RADIUS, Color(0.26, 0.86, 1.0, 0.16))
-	draw_arc(cursor_position, LASER_RADIUS, 0.0, TAU, 48, Color(0.26, 0.86, 1.0, 0.85), 3.0)
-	draw_line(Vector2(cursor_position.x - LASER_RADIUS, cursor_position.y), Vector2(cursor_position.x + LASER_RADIUS, cursor_position.y), Color(0.86, 0.96, 1.0, 0.65), 2.0)
-	draw_line(Vector2(cursor_position.x, cursor_position.y - LASER_RADIUS), Vector2(cursor_position.x, cursor_position.y + LASER_RADIUS), Color(0.86, 0.96, 1.0, 0.65), 2.0)
+	draw_circle(_cursor.position, LASER_RADIUS, Color(0.26, 0.86, 1.0, 0.16))
+	draw_arc(_cursor.position, LASER_RADIUS, 0.0, TAU, 48, Color(0.26, 0.86, 1.0, 0.85), 3.0)
+	draw_line(Vector2(_cursor.position.x - LASER_RADIUS, _cursor.position.y), Vector2(_cursor.position.x + LASER_RADIUS, _cursor.position.y), Color(0.86, 0.96, 1.0, 0.65), 2.0)
+	draw_line(Vector2(_cursor.position.x, _cursor.position.y - LASER_RADIUS), Vector2(_cursor.position.x, _cursor.position.y + LASER_RADIUS), Color(0.86, 0.96, 1.0, 0.65), 2.0)
 
 	if _round_flash > 0.0:
-		draw_arc(cursor_position, 95.0 + 20.0 * _round_flash, 0.0, TAU, 64, Color(0.24, 1.0, 0.66, _round_flash), 5.0)
+		draw_arc(_cursor.position, 95.0 + 20.0 * _round_flash, 0.0, TAU, 64, Color(0.24, 1.0, 0.66, _round_flash), 5.0)
 
 # rendering: handled by clients
 func _draw_cursor_box() -> void:
 	var box_size: Vector2 = Vector2(CURSOR_BOX_SIZE, CURSOR_BOX_SIZE)
-	var box: Rect2 = Rect2(cursor_position - box_size * 0.5, box_size)
+	var box: Rect2 = Rect2(_cursor.position - box_size * 0.5, box_size)
 	var fill_color: Color = Color(0.24, 1.0, 0.74, 0.14)
 	var line_color: Color = Color(0.24, 1.0, 0.74, 1.0)
 
@@ -283,7 +311,10 @@ func _draw_cursor_box() -> void:
 
 #region input
 # input: handled by clients
+@rpc("call_local")
 func _move_cursor(delta: float) -> void:
+	if _cursor == null:
+		return
 	var movement: Vector2 = Vector2.ZERO
 
 	if Input.is_key_pressed(KEY_A):
@@ -298,13 +329,26 @@ func _move_cursor(delta: float) -> void:
 	if movement == Vector2.ZERO or energy <= 0.0:
 		return
 
-	var next_position: Vector2 = cursor_position + movement.normalized() * CURSOR_SPEED * delta
+	
+	_request_movement(movement, delta)
+	
+
+# move cursor based on input from client
+# TODO: fix this so that movement is always processed, but ONLY on the server;
+# currently it only handles the movement if the host calls this function
+func _request_movement(movement: Vector2, delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+
+
+	var next_position: Vector2 = _cursor.position + movement.normalized() * CURSOR_SPEED * delta
 	next_position.x = clampf(next_position.x, CURSOR_BOX_SIZE * 0.5, VIEW_SIZE.x - CURSOR_BOX_SIZE * 0.5)
 	next_position.y = clampf(next_position.y, CURSOR_BOX_SIZE * 0.5, VIEW_SIZE.y - CURSOR_BOX_SIZE * 0.5)
 
-	if next_position == cursor_position:
+	if next_position == _cursor.position:
 		return
-
+	
 	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
-	cursor_position = next_position
+	_cursor.position = next_position
+	pass
 #endregion

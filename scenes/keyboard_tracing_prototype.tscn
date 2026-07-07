@@ -3,6 +3,17 @@
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
 
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_x50nh"]
+properties/0/path = NodePath(".:score")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:energy")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:completed_targets")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+
 [node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
 
@@ -53,8 +64,13 @@ offset_bottom = -25.0
 grow_horizontal = 0
 grow_vertical = 0
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=987829056]
-
-[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=1955720186]
+[node name="MultiplayerSpawner_targets" type="MultiplayerSpawner" parent="." unique_id=1955720186]
 _spawnable_scenes = PackedStringArray("uid://dmkyhxf84ps2n")
 spawn_path = NodePath("../Targets")
+
+[node name="MultiplayerSpawner_cursor" type="MultiplayerSpawner" parent="." unique_id=819068641]
+_spawnable_scenes = PackedStringArray("uid://cel15onxxfeym")
+spawn_path = NodePath("..")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1222954793]
+replication_config = SubResource("SceneReplicationConfig_x50nh")
