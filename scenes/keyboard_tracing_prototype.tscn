@@ -1,30 +1,14 @@
 [gd_scene format=3 uid="uid://pfo1m1ud0227"]
 
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
-[ext_resource type="PackedScene" uid="uid://dmkyhxf84ps2n" path="res://scenes/target_circle.tscn" id="2_target"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
 
-[node name="SharedCursorPrototype" type="Node2D" unique_id=1750839187]
+[node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
 
 [node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]
 
 [node name="Targets" type="Node2D" parent="." unique_id=832847295]
-
-[node name="Target1" parent="Targets" unique_id=1064801929 instance=ExtResource("2_target")]
-position = Vector2(250, 220)
-
-[node name="Target2" parent="Targets" unique_id=185791570 instance=ExtResource("2_target")]
-position = Vector2(605, 137)
-
-[node name="Target3" parent="Targets" unique_id=1372721760 instance=ExtResource("2_target")]
-position = Vector2(767, 349)
-
-[node name="Target4" parent="Targets" unique_id=755889019 instance=ExtResource("2_target")]
-position = Vector2(350, 435)
-
-[node name="Target5" parent="Targets" unique_id=1382404750 instance=ExtResource("2_target")]
-position = Vector2(541, 298)
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1273282158]
 
@@ -70,3 +54,7 @@ grow_horizontal = 0
 grow_vertical = 0
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=987829056]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=1955720186]
+_spawnable_scenes = PackedStringArray("uid://dmkyhxf84ps2n")
+spawn_path = NodePath("../Targets")
