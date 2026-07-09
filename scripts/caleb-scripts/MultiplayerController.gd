@@ -191,6 +191,7 @@ func SendPlayerData(playerName, id):
 			"name": playerName,
 			"id": id
 		}
+		GameManager.player_ids.push_front(id)
 	print("Player ", playerName, " has joined the game!")
 	# server
 	if multiplayer.is_server():

@@ -331,6 +331,45 @@ func _move_cursor(delta: float) -> void:
 
 	
 	_request_movement(movement, delta)
+
+# set controls based on multiplayer ids in game_manager
+func assign_controls() -> void:
+	if not multiplayer.is_server():
+		return
+
+	var player_count = GameManager.Players.size()
+
+	match player_count:
+		1:
+			# singleplayer mode; assign both control schemes to 
+			# the player
+			GameManager.sync_controls(GameManager.player_ids[0], GameManager.player_ids[0])
+			print("There is exactly one player, who will control both horizontal and vertical axes.")
+			pass
+		2:
+			# 2 players...
+			var value = randf()
+			var p1: int
+			var p2: int
+
+			# randomly assign control schemes
+			if value > 0.5:
+				p1 = GameManager.player_ids[0]
+				p2 = GameManager.player_ids[1]
+				pass
+			else:
+				p2 = GameManager.player_ids[0]
+				p1 = GameManager.player_ids[1]
+				pass
+			
+			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
+			GameManager.sync_controls.rpc(p1, p2)
+			pass
+		_:
+			print("Unexpected number of players (%d); shutting game down..." % player_count)
+			pass
+
+	pass
 	
 
 # move cursor based on input from client
