@@ -37,7 +37,9 @@ var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
 
-#region onready
+var updated_roles = false # this is to check if controls have been properly assigned
+
+#region onready_vars
 @onready var _targets_root: Node2D = $Targets
 @onready var _lines: Node2D = $LaserLines
 # @onready var _camera: Camera2D = $Camera2D
@@ -51,15 +53,26 @@ var _current_line: Line2D = null
 
 
 func _ready() -> void:
-	# _camera.position = _cursor_position
-	instantiate_targets()
-
-	instantiate_cursor()
 	_update_hud()
-
-	_reset_targets()
 	cursor_spawner.spawned.connect(connect_cursor)
 
+	# handling things only the server should...
+	if multiplayer.is_server():
+		assign_controls()
+		# _camera.position = _cursor_position
+		instantiate_targets()
+
+		instantiate_cursor()
+		_reset_targets()
+
+		for player in GameManager.Players:
+			print("Player connected: %d" % player)
+			pass
+	
+	# spawn players?
+
+	
+# create new cursor node
 func instantiate_cursor() -> void:
 	_cursor = CURSOR_SCENE.instantiate()
 	_cursor.position = VIEW_SIZE * 0.5
@@ -67,11 +80,13 @@ func instantiate_cursor() -> void:
 	
 	get_tree().root.add_child(_cursor)
 
+# set _cursor to the cursor node
 func connect_cursor(node: Node) -> void:
 	print("Connecting cursor...")
 	_cursor = node
 	pass
 
+# create laser-target Nodes
 func instantiate_targets() -> void:
 	if not multiplayer.is_server():
 		return
@@ -85,6 +100,8 @@ func instantiate_targets() -> void:
 		_targets.append(new_target)
 	pass
 
+
+# main game loop powering everything
 func _process(delta: float) -> void:
 	# input: handled by clients
 	_move_cursor(delta)
@@ -317,14 +334,30 @@ func _move_cursor(delta: float) -> void:
 		return
 	var movement: Vector2 = Vector2.ZERO
 
-	if Input.is_key_pressed(KEY_A):
-		movement.x -= 1.0
-	if Input.is_key_pressed(KEY_D):
-		movement.x += 1.0
-	if Input.is_key_pressed(KEY_UP):
-		movement.y -= 1.0
-	if Input.is_key_pressed(KEY_DOWN):
-		movement.y += 1.0
+	var my_id = multiplayer.get_unique_id()
+
+	# player 1: horizontal input
+	if my_id == GameManager.player1:
+		if Input.is_key_pressed(KEY_A):
+			movement.x -= 1.0
+		if Input.is_key_pressed(KEY_D):
+			movement.x += 1.0
+	elif my_id == GameManager.player2:
+		# player 2: vertical input
+		if Input.is_key_pressed(KEY_UP):
+			movement.y -= 1.0
+		if Input.is_key_pressed(KEY_DOWN):
+			movement.y += 1.0
+
+	if not updated_roles:
+		if GameManager.player1 != 0 and GameManager.player2 != 0: # if I don't do this, then there is a race condition where player1/player2 aren't initialized
+			# if my_id == GameManager.player1:
+			# 	clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
+			# elif my_id == GameManager.player2:
+			# 	clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
+			# else:
+			# 	clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
+			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:
 		return

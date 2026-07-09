@@ -123,7 +123,7 @@ func _on_host_button_button_down() -> void:
 	hostButton.disabled = true
 	joinButton.disabled = true
 
-	
+	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
 	# TODO: create server
 	hostGame()
 
