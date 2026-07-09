@@ -15,8 +15,12 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="project.space-game"
-run/main_scene="res://scenes/keyboard_tracing_prototype.tscn"
+run/main_scene="uid://dt88x8ynwkq76"
 config/features=PackedStringArray("4.6")
+
+[autoload]
+
+GameManager="*uid://ymt01ouhiisq"
 
 [display]
 
