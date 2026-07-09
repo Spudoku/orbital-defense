@@ -58,13 +58,13 @@ func _ready() -> void:
 
 	# handling things only the server should...
 	if multiplayer.is_server():
-		assign_controls()
+		# assign_controls()
 		# _camera.position = _cursor_position
 		instantiate_targets()
 
 		instantiate_cursor()
 		_reset_targets()
-
+		get_tree().create_timer(0.1).timeout.connect(assign_controls)
 		for player in GameManager.Players:
 			print("Player connected: %d" % player)
 			pass
@@ -78,7 +78,7 @@ func instantiate_cursor() -> void:
 	_cursor.position = VIEW_SIZE * 0.5
 	# _camera.position = _cursor_position
 	
-	get_tree().root.add_child(_cursor)
+	add_child(_cursor)
 
 # set _cursor to the cursor node
 func connect_cursor(node: Node) -> void:
@@ -328,21 +328,23 @@ func _draw_cursor_box() -> void:
 
 #region input
 # input: handled by clients
-@rpc("call_local")
+@rpc("any_peer", "call_local", "unreliable")
 func _move_cursor(delta: float) -> void:
 	if _cursor == null:
 		return
 	var movement: Vector2 = Vector2.ZERO
 
 	var my_id = multiplayer.get_unique_id()
-
+	
+	# print("Game manager players: " + str(GameManager.player1) + "; " + str(GameManager.player2))
+	
 	# player 1: horizontal input
 	if my_id == GameManager.player1:
 		if Input.is_key_pressed(KEY_A):
 			movement.x -= 1.0
 		if Input.is_key_pressed(KEY_D):
 			movement.x += 1.0
-	elif my_id == GameManager.player2:
+	if my_id == GameManager.player2:
 		# player 2: vertical input
 		if Input.is_key_pressed(KEY_UP):
 			movement.y -= 1.0
@@ -363,11 +365,13 @@ func _move_cursor(delta: float) -> void:
 		return
 
 	
-	_request_movement(movement, delta)
+	_request_movement.rpc(movement, delta)
 
 # set controls based on multiplayer ids in game_manager
 func assign_controls() -> void:
+	print("attempting to assign controls")
 	if not multiplayer.is_server():
+		print("Only the server can handle authority...")
 		return
 
 	var player_count = GameManager.Players.size()
@@ -376,8 +380,9 @@ func assign_controls() -> void:
 		1:
 			# singleplayer mode; assign both control schemes to 
 			# the player
-			GameManager.sync_controls(GameManager.player_ids[0], GameManager.player_ids[0])
+			GameManager.sync_controls.rpc(GameManager.player_ids[0], GameManager.player_ids[0])
 			print("There is exactly one player, who will control both horizontal and vertical axes.")
+			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
 			pass
 		2:
 			# 2 players...
@@ -408,10 +413,11 @@ func assign_controls() -> void:
 # move cursor based on input from client
 # TODO: fix this so that movement is always processed, but ONLY on the server;
 # currently it only handles the movement if the host calls this function
+@rpc("any_peer", "call_local", "unreliable")
 func _request_movement(movement: Vector2, delta: float) -> void:
 	if not multiplayer.is_server():
 		return
-
+	
 
 	var next_position: Vector2 = _cursor.position + movement.normalized() * CURSOR_SPEED * delta
 	next_position.x = clampf(next_position.x, CURSOR_BOX_SIZE * 0.5, VIEW_SIZE.x - CURSOR_BOX_SIZE * 0.5)
