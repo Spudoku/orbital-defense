@@ -94,18 +94,30 @@ func _on_join_button_button_down() -> void:
 
 	cancelButton.disabled = false
 	state = LobbyState.JOINING
-	startGameButton.disabled = true
+	startGameButton.disabled = false
 
 	#TODO: connect to server
-	peer = ENetMultiplayerPeer.new()
-	peer.create_client(Address, port)
-	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	peer = WebSocketMultiplayerPeer.new()
+
+
+	# peer.create_client(Address, port)
+	# peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	# multiplayer.set_multiplayer_peer(peer)
+	# print("Joining server...")
+	# #TODO: send player data to server (username, id) and notify host of new player joining
+	# # in NotificationLabel, 
+
+	# code by Gemini:
+	var connection_url = "ws://" + Address + ":" + str(port)
+	print("Connecting to: ", connection_url)
+
+	var error = peer.create_client(connection_url)
+	if error != OK:
+		print("Cannot connect to server!", error)
+		return
+
 	multiplayer.set_multiplayer_peer(peer)
 	print("Joining server...")
-	#TODO: send player data to server (username, id) and notify host of new player joining
-	# in NotificationLabel, 
-
-	
 	pass # Replace with function body.
 
 
@@ -131,11 +143,10 @@ func _on_host_button_button_down() -> void:
 
 
 func _on_start_game_button_button_down() -> void:
-	if state != LobbyState.HOSTING:
-		print("You must be hosting to start the game!")
-		label.text = "You must be hosting to start the game!"
-		return
-	
+	# if state != LobbyState.HOSTING:
+	# 	print("You must be hosting to start the game!")
+	# 	label.text = "You must be hosting to start the game!"
+	# 	return
 	if usernameText.text == "":
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
@@ -146,28 +157,40 @@ func _on_start_game_button_button_down() -> void:
 	hostButton.disabled = true
 	joinButton.disabled = true
 	# start the game!
-	startGame.rpc()
+	request_server_to_start.rpc_id(1)
 	pass # Replace with function body.
 
 
 #region backend
 
 func hostGame():
-	peer = ENetMultiplayerPeer.new()
-	var error = peer.create_server(port, MAX_PLAYERS)
+	# hopefully Railway can provide the right environment variable
+	if OS.has_environment("PORT"):
+		port = OS.get_environment("PORT").to_int()
+
+	peer = WebSocketMultiplayerPeer.new()
+	var error = peer.create_server(port, "*")
 	
 
 	if error != OK:
 		print("Cannot host!", error)
 		return
 	
-	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	# peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
 
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
 
 	
 	pass
+
+# This runs ONLY on the server because clients called it via rpc_id(1)
+@rpc("any_peer", "call_local", "reliable")
+func request_server_to_start():
+	if multiplayer.is_server():
+		print("Server received start request. Broadcasting to all clients...")
+		# The server calls .rpc(), which successfully broadcasts to ALL clients
+		startGame.rpc()
 
 @rpc("any_peer", "call_local")
 func startGame():

@@ -1,0 +1,52 @@
+# server build
+- export a linux dedicated server build
+- docker file:
+
+# STEP-BY-STEP
+1. export as dedicated server
+2. run following commands:
+	docker build -t godot-dedicated-server .
+	docker run -d -p 8910:8910 --name my-godot-server godot-dedicated-server
+3. connect clients from editor
+4. play the game
+5. to restart server, run:
+	docker stop my-godot-server
+	docker restart my-godot-server
+	
+
+	
+# running the docker container
+- navigate to root directory of project
+- build the container:
+	docker build -t godot-dedicated-server .
+
+- to run the container:
+	docker run -d -p 8910:8910 --name my-godot-server godot-dedicated-server
+
+	"What this command does:
+
+		-d: Runs the container in the background (detached mode).
+
+		-p 8910:8910: Maps port 8910 on your actual desktop (the host) to port 8910 inside the virtual environment of the Docker container.
+
+		--name my-godot-server: Gives the container a friendly name so you can stop or check it easily."
+
+
+# rebuilding and re-running the container
+# 1. Stop and remove the crashed container instance
+docker rm -f my-godot-server
+
+# 2. Rebuild your image with the new dependencies
+docker build -t godot-dedicated-server .
+
+# 3. Start it back up
+docker run -d -p 8910:8910 --name my-godot-server godot-dedicated-server
+
+
+# other useful commands
+- show logs
+docker logs my-godot-server
+
+- stop and start the server
+docker stop my-godot-server
+docker restart my-godot-server

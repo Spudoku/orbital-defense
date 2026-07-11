@@ -11,3 +11,6 @@ var player2: int # this player controls vertical movement
 func sync_controls(p1: int, p2: int) -> void:
 	player1 = p1
 	player2 = p2
+	var level = get_tree().root.get_node_or_null("Level")
+	if level:
+		level.updated_roles = false

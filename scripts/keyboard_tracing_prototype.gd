@@ -67,6 +67,7 @@ func _ready() -> void:
 		get_tree().create_timer(0.1).timeout.connect(assign_controls)
 		for player in GameManager.Players:
 			print("Player connected: %d" % player)
+			
 			pass
 	
 	# spawn players?
@@ -400,8 +401,9 @@ func assign_controls() -> void:
 				p1 = GameManager.player_ids[1]
 				pass
 			
-			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
+			
 			GameManager.sync_controls.rpc(p1, p2)
+			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
 			pass
 		_:
 			print("Unexpected number of players (%d); shutting game down..." % player_count)
