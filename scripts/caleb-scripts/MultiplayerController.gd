@@ -28,7 +28,7 @@ extends Control
 #
 
 # Inside MultiplayerController.gd
-@export var Address = "your-game-production.up.railway.app" # Put your Railway domain here!
+@export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
 @export var port = 443 # Standard secure web proxy port used by Railway
 
 const MAX_PLAYERS = 2
