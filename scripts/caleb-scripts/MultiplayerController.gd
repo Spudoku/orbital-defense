@@ -75,6 +75,9 @@ func init_menu():
 	if not multiplayer.connection_failed.is_connected(connection_failed):
 		multiplayer.connection_failed.connect(connection_failed)
 
+	if not multiplayer.server_disconnected.is_connected(_on_server_disconnected):
+		multiplayer.server_disconnected.connect(_on_server_disconnected)
+
 
 func _on_cancel_button_button_down() -> void:
 	label.text = ""
@@ -284,6 +287,23 @@ func close_server():
 		print("Server closed.")
 	else:
 		print("No multiplayer peer to close.")
+
+
+# reset menu when disconnected by server
+func _on_server_disconnected(id: int) -> void:
+	print("Server disconnected.")
+
+	var level = get_tree().root.get_node_or_null("Level")
+	if level:
+		level.set_process(false)
+		level.set_physics_process(false)
+		level.queue_free()
+	
+	GameManager.clear_game_state()
+
+	self.visible = true
+	self.process_mode = Node.PROCESS_MODE_INHERIT
+	init_menu()
 
 
 #endregion
