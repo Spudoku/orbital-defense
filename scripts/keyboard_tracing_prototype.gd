@@ -115,6 +115,9 @@ func instantiate_targets() -> void:
 
 # main game loop powering everything
 func _process(delta: float) -> void:
+	if not multiplayer.has_multiplayer_peer():
+		return
+
 	if not is_instance_valid(_cursor):
 		return
 
@@ -346,7 +349,7 @@ func _update_laser_line() -> void:
 	# Safe guard against freed cursor
 	if not is_instance_valid(_cursor):
 		return
-		
+
 	if _current_line == null:
 		_current_line = Line2D.new()
 		_current_line.default_color = Color.AQUA
