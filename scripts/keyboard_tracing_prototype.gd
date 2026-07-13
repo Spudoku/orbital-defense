@@ -278,6 +278,8 @@ func _update_hud() -> void:
 @rpc("any_peer", "call_local")
 func game_end() -> void:
 		# send all clients back to main menu
+	set_process(false)
+	set_physics_process(false)
 	back_to_menu()
 	GameManager.clear_game_state()
 
