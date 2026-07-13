@@ -330,6 +330,8 @@ func disconnect_all_players() -> void:
 #region rendering
 # rendering: handled by clients
 func _draw() -> void:
+	if game_state != GameState.Playing:
+		return
 	if _cursor == null:
 		return
 	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.015, 0.018, 0.032), true)
