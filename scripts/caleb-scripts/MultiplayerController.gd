@@ -1,5 +1,5 @@
 extends Control
-
+class_name MultiplayerController
 #region export
 @export var gameScene: PackedScene
 
@@ -52,6 +52,13 @@ enum LobbyState {
 var state = LobbyState.IDLE
 
 func _ready():
+	init_menu()
+	
+	if "--server" in OS.get_cmdline_args():
+		hostGame()
+	pass
+
+func init_menu():
 	cancelButton.disabled = true
 	startGameButton.disabled = true
 	hostButton.disabled = false
@@ -59,14 +66,14 @@ func _ready():
 	state = LobbyState.IDLE
 
 	# server connectivity
-	multiplayer.peer_connected.connect(player_connected)
-	multiplayer.peer_disconnected.connect(player_disconnected)
-	multiplayer.connected_to_server.connect(connected_to_server)
-	multiplayer.connection_failed.connect(connection_failed)
-	
-	if "--server" in OS.get_cmdline_args():
-		hostGame()
-	pass
+	if not multiplayer.peer_connected.is_connected(player_connected):
+		multiplayer.peer_connected.connect(player_connected)
+	if not multiplayer.peer_disconnected.is_connected(player_disconnected):
+		multiplayer.peer_disconnected.connect(player_disconnected)
+	if not multiplayer.connected_to_server.is_connected(connected_to_server):
+		multiplayer.connected_to_server.connect(connected_to_server)
+	if not multiplayer.connection_failed.is_connected(connection_failed):
+		multiplayer.connection_failed.connect(connection_failed)
 
 
 func _on_cancel_button_button_down() -> void:

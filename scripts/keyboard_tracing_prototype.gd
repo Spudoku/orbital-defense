@@ -305,7 +305,9 @@ func back_to_menu() -> void:
 		menu.visible = true
 		menu.process_mode = Node.PROCESS_MODE_INHERIT
 		# Force a visual reset on the buttons
-		menu._ready()
+
+		if menu.has_method("init_menu"):
+			menu.init_menu()
 	else:
 		# Fallback if the menu was somehow lost
 		print("Menu not found, instantiate new one...")
@@ -419,7 +421,9 @@ func _move_cursor(delta: float) -> void:
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
 			game_state = GameState.Ended
+			set_process(false) # 👈 STOP PROCESS IMMEDIATELY to prevent loop spam!
 			# this should trigger game ending
+			game_end()
 		return
 
 	
