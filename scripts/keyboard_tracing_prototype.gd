@@ -3,6 +3,7 @@ extends Node2D
 #region constants
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
+const MENU_SCENE = preload("res://scenes/control.tscn")
 
 const VIEW_SIZE = Vector2(960, 640)
 const CURSOR_BOX_SIZE = 36.0
@@ -25,6 +26,12 @@ const TARGET_RED_RING = Color(1.0, 0.55, 0.40, 0.75)
 const TARGET_DONE_FILL = Color(0.24, 1.0, 0.66, 0.9)
 const TARGET_DONE_GLOW = Color(0.24, 1.0, 0.66, 0.18)
 const TARGET_DONE_RING = Color(0.86, 0.96, 1.0, 0.55)
+
+enum GameState {
+	Playing = 0,
+	Paused = 1,
+	Ended = 2
+}
 #endregion
 
 var _cursor: Node2D
@@ -38,6 +45,8 @@ var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
 
 var updated_roles = false # this is to check if controls have been properly assigned
+
+var game_state: GameState = GameState.Playing
 
 #region onready_vars
 @onready var _targets_root: Node2D = $Targets
@@ -69,6 +78,8 @@ func _ready() -> void:
 			print("Player connected: %d" % player)
 			
 			pass
+
+		game_state = GameState.Playing
 	
 	# spawn players?
 
@@ -104,35 +115,42 @@ func instantiate_targets() -> void:
 
 # main game loop powering everything
 func _process(delta: float) -> void:
-	# input: handled by clients
-	_move_cursor(delta)
+	if game_state == GameState.Playing:
+		# input: handled by clients
+		_move_cursor(delta)
 
-	# camera position: handled by server
-	# _camera.position = _cursor_position
+		# camera position: handled by server
+		# _camera.position = _cursor_position
 
-	# game logic: handled by server
-	# TODO: properly check if one (or both) players are pressing
-	# the spacebar, then draw the laser for both clients
-	# 
-	_laser_active = Input.is_key_pressed(KEY_SPACE)
+		# game logic: handled by server
+		# TODO: properly check if one (or both) players are pressing
+		# the spacebar, then draw the laser for both clients
+		# 
+		_laser_active = Input.is_key_pressed(KEY_SPACE)
 
-	if _laser_active:
-		_check_target_hits()
-		_update_laser_line()
-	else:
-		_clear_laser_line()
+		if _laser_active:
+			_check_target_hits()
+			_update_laser_line()
+		else:
+			_clear_laser_line()
 
-	if not _targets.is_empty() and _all_targets_completed():
-		score += 1
-		energy = MAX_ENERGY
-		_round_flash = 1.0
-		_reset_targets()
+		if not _targets.is_empty() and _all_targets_completed():
+			score += 1
+			energy = MAX_ENERGY
+			_round_flash = 1.0
+			_reset_targets()
 
-	_round_flash = maxf(0.0, _round_flash - delta * 2.0)
+		_round_flash = maxf(0.0, _round_flash - delta * 2.0)
 
-	# rendering: handled by clients
-	_update_hud()
-	queue_redraw()
+		# rendering: handled by clients
+		_update_hud()
+		queue_redraw()
+	elif game_state == GameState.Paused:
+		# Handle paused state logic
+		pass
+	elif game_state == GameState.Ended:
+		game_end()
+		pass
 
 
 #region gamelogic
@@ -259,19 +277,25 @@ func _update_hud() -> void:
 
 @rpc("any_peer", "call_local")
 func game_end() -> void:
-	if not multiplayer.is_server():
-		return
-	disconnect_all_players()
+	# handle things as the server
+	if multiplayer.is_server():
+		disconnect_all_players()
+		# clear game manager fields
+		GameManager.clear_game_state()
 	
-	# TODO: menu popup showing status of game, 
-	# disconnect players from server
-	# prepare to call back_to_menu()
+	# send all clients back to main menu
+	back_to_menu()
 	pass
 
 func back_to_menu() -> void:
+	print("Going back to menu...")
 	# TODO: Implement menu navigation
 	# disable the Level node
 	# re-enable (or re-create) menu node
+	var menu = MENU_SCENE.instantiate()
+	get_tree().root.add_child(menu)
+	# free this node
+	queue_free()
 	pass
 
 func disconnect_all_players() -> void:
@@ -379,8 +403,8 @@ func _move_cursor(delta: float) -> void:
 
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
-			game_end()
-			print("Energy depleted! Disconnecting players...")
+			game_state = GameState.Ended
+			# this should trigger game ending
 		return
 
 	

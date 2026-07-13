@@ -117,8 +117,8 @@ func _on_join_button_button_down() -> void:
 	# # in NotificationLabel, 
 
 	# code by Gemini:
-	# var connection_url = "wss://" + Address + ":" + str(port)
-	var connection_url = Address
+	var connection_url = "wss://" + Address + ":" + str(port)
+	# var connection_url = Address
 	print("Connecting to: ", connection_url)
 
 	var error = peer.create_client(connection_url)
@@ -209,9 +209,9 @@ func startGame():
 		
 		get_tree().root.add_child(scene)
 
-		self.process_mode = Node.PROCESS_MODE_DISABLED
-		self.visible = false
-
+		# self.process_mode = Node.PROCESS_MODE_DISABLED
+		# self.visible = false
+		queue_free()
 		# the scenes '_ready' will handle spawning players and game logic
 
 	pass

@@ -14,3 +14,10 @@ func sync_controls(p1: int, p2: int) -> void:
 	var level = get_tree().root.get_node_or_null("Level")
 	if level:
 		level.updated_roles = false
+
+@rpc("any_peer", "call_local", "reliable")
+func clear_game_state() -> void:
+	player1 = -1
+	player2 = -1
+	Players.clear()
+	player_ids.clear()
