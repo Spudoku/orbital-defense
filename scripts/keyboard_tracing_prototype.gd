@@ -277,15 +277,17 @@ func _update_hud() -> void:
 
 @rpc("any_peer", "call_local")
 func game_end() -> void:
+		# send all clients back to main menu
+	back_to_menu()
+	GameManager.clear_game_state()
+
+
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
 		# clear game manager fields
 		
 	
-	# send all clients back to main menu
-	back_to_menu()
-	GameManager.clear_game_state()
 	pass
 
 func back_to_menu() -> void:
