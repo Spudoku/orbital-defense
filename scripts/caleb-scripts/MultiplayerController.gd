@@ -28,8 +28,16 @@ extends Control
 #
 
 # Inside MultiplayerController.gd
+# RAILWAY TESTING VALUES
 @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
 @export var port = 443 # Standard secure web proxy port used by Railway
+
+# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
+# @export var port = 443 # Standard secure web proxy port used by Railway
+
+# LOCAL TESTING ONLY
+# @export var Address = "127.0.0.1" # local server (?)
+# @export var port = 8910 # TODO: check port?
 
 const MAX_PLAYERS = 2
 
@@ -109,7 +117,8 @@ func _on_join_button_button_down() -> void:
 	# # in NotificationLabel, 
 
 	# code by Gemini:
-	var connection_url = "wss://" + Address + ":" + str(port)
+	# var connection_url = "wss://" + Address + ":" + str(port)
+	var connection_url = Address
 	print("Connecting to: ", connection_url)
 
 	var error = peer.create_client(connection_url)

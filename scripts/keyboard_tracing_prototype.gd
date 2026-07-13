@@ -256,16 +256,31 @@ func _update_hud() -> void:
 	_target_label.text = "Targets: %d/%d" % [completed_targets, TARGET_COUNT]
 	_energy_display.set_energy(energy, MAX_ENERGY)
 
-# server only
-# func _count_completed_targets() -> int:
-# 	if not multiplayer.is_server():
-# 		return 0
 
-# 	completed_targets = 0
-# 	for target in _targets:
-# 		if _is_target_completed(target):
-# 			completed_targets += 1
-# 	return completed_targets
+@rpc("any_peer", "call_local")
+func game_end() -> void:
+	if not multiplayer.is_server():
+		return
+	disconnect_all_players()
+	
+	# TODO: menu popup showing status of game, 
+	# disconnect players from server
+	# prepare to call back_to_menu()
+	pass
+
+func back_to_menu() -> void:
+	# TODO: Implement menu navigation
+	# disable the Level node
+	# re-enable (or re-create) menu node
+	pass
+
+func disconnect_all_players() -> void:
+	if not multiplayer.is_server():
+		return
+
+	for player in multiplayer.get_peers():
+		multiplayer.disconnect_peer(player)
+
 #endregion
 
 
@@ -363,6 +378,9 @@ func _move_cursor(delta: float) -> void:
 			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:
+		if energy <= 0.0:
+			game_end()
+			print("Energy depleted! Disconnecting players...")
 		return
 
 	
