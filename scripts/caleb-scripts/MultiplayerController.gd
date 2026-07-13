@@ -290,7 +290,7 @@ func close_server():
 
 
 # reset menu when disconnected by server
-func _on_server_disconnected(id: int) -> void:
+func _on_server_disconnected() -> void:
 	print("Server disconnected.")
 
 	var level = get_tree().root.get_node_or_null("Level")
