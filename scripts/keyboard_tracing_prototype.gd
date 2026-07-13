@@ -281,21 +281,34 @@ func game_end() -> void:
 	if multiplayer.is_server():
 		disconnect_all_players()
 		# clear game manager fields
-		GameManager.clear_game_state()
+		
 	
 	# send all clients back to main menu
 	back_to_menu()
+	GameManager.clear_game_state()
 	pass
 
 func back_to_menu() -> void:
 	print("Going back to menu...")
+
+	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
 	# TODO: Implement menu navigation
 	# disable the Level node
 	# re-enable (or re-create) menu node
-	var menu = MENU_SCENE.instantiate()
-	get_tree().root.add_child(menu)
-	# free this node
-	queue_free()
+	var menu = get_tree().root.get_node_or_null("Control")
+	if menu:
+		print("Found valid menu!")
+		menu.visible = true
+		menu.process_mode = Node.PROCESS_MODE_INHERIT
+		# Force a visual reset on the buttons
+		menu._ready()
+	else:
+		# Fallback if the menu was somehow lost
+		print("Menu not found, instantiate new one...")
+		var new_menu = MENU_SCENE.instantiate()
+		get_tree().root.add_child(new_menu)
 	pass
 
 func disconnect_all_players() -> void:

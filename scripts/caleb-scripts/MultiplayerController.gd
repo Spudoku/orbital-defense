@@ -209,9 +209,8 @@ func startGame():
 		
 		get_tree().root.add_child(scene)
 
-		# self.process_mode = Node.PROCESS_MODE_DISABLED
-		# self.visible = false
-		queue_free()
+		self.process_mode = Node.PROCESS_MODE_DISABLED
+		self.visible = false
 		# the scenes '_ready' will handle spawning players and game logic
 
 	pass
