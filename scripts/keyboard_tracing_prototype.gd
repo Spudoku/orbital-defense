@@ -115,6 +115,12 @@ func instantiate_targets() -> void:
 
 # main game loop powering everything
 func _process(delta: float) -> void:
+	if not multiplayer.has_multiplayer_peer():
+		return
+
+	if not is_instance_valid(_cursor):
+		return
+
 	if game_state == GameState.Playing:
 		# input: handled by clients
 		_move_cursor(delta)
@@ -277,25 +283,44 @@ func _update_hud() -> void:
 
 @rpc("any_peer", "call_local")
 func game_end() -> void:
+		# send all clients back to main menu
+	set_process(false)
+	set_physics_process(false)
+	back_to_menu()
+	GameManager.clear_game_state()
+
+
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
 		# clear game manager fields
-		GameManager.clear_game_state()
+		
 	
-	# send all clients back to main menu
-	back_to_menu()
 	pass
 
 func back_to_menu() -> void:
 	print("Going back to menu...")
+
+	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
 	# TODO: Implement menu navigation
 	# disable the Level node
 	# re-enable (or re-create) menu node
-	var menu = MENU_SCENE.instantiate()
-	get_tree().root.add_child(menu)
-	# free this node
-	queue_free()
+	var menu = get_tree().root.get_node_or_null("Control")
+	if menu:
+		print("Found valid menu!")
+		menu.visible = true
+		menu.process_mode = Node.PROCESS_MODE_INHERIT
+		# Force a visual reset on the buttons
+
+		if menu.has_method("init_menu"):
+			menu.init_menu()
+	else:
+		# Fallback if the menu was somehow lost
+		print("Menu not found, instantiate new one...")
+		var new_menu = MENU_SCENE.instantiate()
+		get_tree().root.add_child(new_menu)
 	pass
 
 func disconnect_all_players() -> void:
@@ -305,12 +330,15 @@ func disconnect_all_players() -> void:
 	for player in multiplayer.get_peers():
 		multiplayer.disconnect_peer(player)
 
+
 #endregion
 
 
 #region rendering
 # rendering: handled by clients
 func _draw() -> void:
+	if game_state != GameState.Playing:
+		return
 	if _cursor == null:
 		return
 	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.015, 0.018, 0.032), true)
@@ -319,6 +347,10 @@ func _draw() -> void:
 	_draw_cursor_box()
 
 func _update_laser_line() -> void:
+	# Safe guard against freed cursor
+	if not is_instance_valid(_cursor):
+		return
+
 	if _current_line == null:
 		_current_line = Line2D.new()
 		_current_line.default_color = Color.AQUA
@@ -404,7 +436,9 @@ func _move_cursor(delta: float) -> void:
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
 			game_state = GameState.Ended
+			set_process(false) # 👈 STOP PROCESS IMMEDIATELY to prevent loop spam!
 			# this should trigger game ending
+			game_end()
 		return
 
 	

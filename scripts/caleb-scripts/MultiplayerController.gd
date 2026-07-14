@@ -1,8 +1,27 @@
 extends Control
+class_name MultiplayerController
+enum TestingType {
+	Railway = 0,
+	Local = 1
+}
 
 #region export
+
+@export var testingType: TestingType
 @export var gameScene: PackedScene
 
+
+# Inside MultiplayerController.gd
+# RAILWAY TESTING VALUES
+@export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
+@export var port = 443 # Standard secure web proxy port used by Railway
+
+# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
+# @export var port = 443 # Standard secure web proxy port used by Railway
+
+# LOCAL TESTING ONLY
+# @export var Address = "127.0.0.1" # local server (?)
+# @export var port = 8910 # TODO: check port?
 #endregion
 
 #region onReady
@@ -27,17 +46,6 @@ extends Control
 # joining: from idle using join button. can go back to idle by pressing cancel
 #
 
-# Inside MultiplayerController.gd
-# RAILWAY TESTING VALUES
-@export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-@export var port = 443 # Standard secure web proxy port used by Railway
-
-# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-# @export var port = 443 # Standard secure web proxy port used by Railway
-
-# LOCAL TESTING ONLY
-# @export var Address = "127.0.0.1" # local server (?)
-# @export var port = 8910 # TODO: check port?
 
 const MAX_PLAYERS = 2
 
@@ -52,6 +60,20 @@ enum LobbyState {
 var state = LobbyState.IDLE
 
 func _ready():
+	init_menu()
+	match testingType:
+		TestingType.Railway:
+			Address = "orbital-defense-production.up.railway.app"
+			port = 443
+		TestingType.Local:
+			Address = "127.0.0.1"
+			port = 8910
+	
+	if "--server" in OS.get_cmdline_args():
+		hostGame()
+	pass
+
+func init_menu():
 	cancelButton.disabled = true
 	startGameButton.disabled = true
 	hostButton.disabled = false
@@ -59,14 +81,17 @@ func _ready():
 	state = LobbyState.IDLE
 
 	# server connectivity
-	multiplayer.peer_connected.connect(player_connected)
-	multiplayer.peer_disconnected.connect(player_disconnected)
-	multiplayer.connected_to_server.connect(connected_to_server)
-	multiplayer.connection_failed.connect(connection_failed)
-	
-	if "--server" in OS.get_cmdline_args():
-		hostGame()
-	pass
+	if not multiplayer.peer_connected.is_connected(player_connected):
+		multiplayer.peer_connected.connect(player_connected)
+	if not multiplayer.peer_disconnected.is_connected(player_disconnected):
+		multiplayer.peer_disconnected.connect(player_disconnected)
+	if not multiplayer.connected_to_server.is_connected(connected_to_server):
+		multiplayer.connected_to_server.connect(connected_to_server)
+	if not multiplayer.connection_failed.is_connected(connection_failed):
+		multiplayer.connection_failed.connect(connection_failed)
+
+	if not multiplayer.server_disconnected.is_connected(_on_server_disconnected):
+		multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 
 func _on_cancel_button_button_down() -> void:
@@ -106,25 +131,34 @@ func _on_join_button_button_down() -> void:
 	startGameButton.disabled = false
 
 	#TODO: connect to server
-	peer = WebSocketMultiplayerPeer.new()
 
-
-	# peer.create_client(Address, port)
-	# peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
-	# multiplayer.set_multiplayer_peer(peer)
-	# print("Joining server...")
-	# #TODO: send player data to server (username, id) and notify host of new player joining
-	# # in NotificationLabel, 
 
 	# code by Gemini:
-	var connection_url = "wss://" + Address + ":" + str(port)
-	# var connection_url = Address
-	print("Connecting to: ", connection_url)
 
-	var error = peer.create_client(connection_url)
-	if error != OK:
-		print("Cannot connect to server!", error)
-		return
+	match testingType:
+		TestingType.Railway:
+			var connection_url = "wss://" + Address + ":" + str(port)
+			peer = WebSocketMultiplayerPeer.new()
+			print("Connecting to cloud server: ", connection_url)
+		
+			# Call create_client with the WebSocket URL string
+			var error = peer.create_client(connection_url)
+			if error != OK:
+				print("Cannot connect to WebSocket server!", error)
+				return
+
+		TestingType.Local:
+			peer = ENetMultiplayerPeer.new()
+			
+			
+			var error = peer.create_client(Address, port)
+			if error != OK:
+				print("Cannot connect to server!", error)
+				return
+			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	
+	# var connection_url = Address
+	
 
 	multiplayer.set_multiplayer_peer(peer)
 	print("Joining server...")
@@ -178,16 +212,27 @@ func hostGame():
 	if OS.has_environment("PORT"):
 		port = OS.get_environment("PORT").to_int()
 
-	peer = WebSocketMultiplayerPeer.new()
-	var error = peer.create_server(port, "*")
+	match testingType:
+		TestingType.Railway:
+			peer = WebSocketMultiplayerPeer.new()
+			var error = peer.create_server(port, "*")
+			if error != OK:
+				print("Cannot host WebSocket server!", error)
+				return
+		TestingType.Local:
+			peer = ENetMultiplayerPeer.new()
+			var error = peer.create_server(port, MAX_PLAYERS)
+			if error != OK:
+				print("Cannot host!", error)
+				return
+			# Safely isolate ENet packet tracking properties exclusively to Local builds
+			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
-
-	if error != OK:
-		print("Cannot host!", error)
-		return
 	
 	# peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
-
+	if testingType == TestingType.Local:
+		peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
 
@@ -209,9 +254,8 @@ func startGame():
 		
 		get_tree().root.add_child(scene)
 
-		# self.process_mode = Node.PROCESS_MODE_DISABLED
-		# self.visible = false
-		queue_free()
+		self.process_mode = Node.PROCESS_MODE_DISABLED
+		self.visible = false
 		# the scenes '_ready' will handle spawning players and game logic
 
 	pass
@@ -266,18 +310,30 @@ func close_server():
 	var multiplayer_peer = multiplayer.get_multiplayer_peer()
 
 	if multiplayer_peer and not (multiplayer_peer is OfflineMultiplayerPeer):
-		print("Disconnecting all peers...")
-		for peer_id in multiplayer_peer.get_peers():
-			multiplayer_peer.disconnect_peer(peer_id)
-			print("Disconnected peer ", peer_id)
-
 		multiplayer_peer.close()
-
 		multiplayer.multiplayer_peer = null
+		print("Server closed.")
 
 		print("Server closed.")
 	else:
 		print("No multiplayer peer to close.")
+
+
+# reset menu when disconnected by server
+func _on_server_disconnected() -> void:
+	print("Server disconnected.")
+
+	var level = get_tree().root.get_node_or_null("Level")
+	if level:
+		level.set_process(false)
+		level.set_physics_process(false)
+		level.queue_free()
+	
+	GameManager.clear_game_state()
+
+	self.visible = true
+	self.process_mode = Node.PROCESS_MODE_INHERIT
+	init_menu()
 
 
 #endregion
