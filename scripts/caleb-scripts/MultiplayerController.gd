@@ -275,14 +275,9 @@ func close_server():
 	var multiplayer_peer = multiplayer.get_multiplayer_peer()
 
 	if multiplayer_peer and not (multiplayer_peer is OfflineMultiplayerPeer):
-		print("Disconnecting all peers...")
-		for peer_id in multiplayer_peer.get_peers():
-			multiplayer_peer.disconnect_peer(peer_id)
-			print("Disconnected peer ", peer_id)
-
 		multiplayer_peer.close()
-
 		multiplayer.multiplayer_peer = null
+		print("Server closed.")
 
 		print("Server closed.")
 	else:
