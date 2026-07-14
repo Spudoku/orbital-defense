@@ -1,8 +1,27 @@
 extends Control
 class_name MultiplayerController
+enum TestingType {
+	Railway = 0,
+	Local = 1
+}
+
 #region export
+
+@export var testingType: TestingType
 @export var gameScene: PackedScene
 
+
+# Inside MultiplayerController.gd
+# RAILWAY TESTING VALUES
+@export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
+@export var port = 443 # Standard secure web proxy port used by Railway
+
+# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
+# @export var port = 443 # Standard secure web proxy port used by Railway
+
+# LOCAL TESTING ONLY
+# @export var Address = "127.0.0.1" # local server (?)
+# @export var port = 8910 # TODO: check port?
 #endregion
 
 #region onReady
@@ -27,17 +46,6 @@ class_name MultiplayerController
 # joining: from idle using join button. can go back to idle by pressing cancel
 #
 
-# Inside MultiplayerController.gd
-# RAILWAY TESTING VALUES
-@export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-@export var port = 443 # Standard secure web proxy port used by Railway
-
-# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-# @export var port = 443 # Standard secure web proxy port used by Railway
-
-# LOCAL TESTING ONLY
-# @export var Address = "127.0.0.1" # local server (?)
-# @export var port = 8910 # TODO: check port?
 
 const MAX_PLAYERS = 2
 
@@ -53,6 +61,13 @@ var state = LobbyState.IDLE
 
 func _ready():
 	init_menu()
+	match testingType:
+		TestingType.Railway:
+			Address = "orbital-defense-production.up.railway.app"
+			port = 443
+		TestingType.Local:
+			Address = "127.0.0.1"
+			port = 8910
 	
 	if "--server" in OS.get_cmdline_args():
 		hostGame()
@@ -116,25 +131,34 @@ func _on_join_button_button_down() -> void:
 	startGameButton.disabled = false
 
 	#TODO: connect to server
-	peer = WebSocketMultiplayerPeer.new()
 
-
-	# peer.create_client(Address, port)
-	# peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
-	# multiplayer.set_multiplayer_peer(peer)
-	# print("Joining server...")
-	# #TODO: send player data to server (username, id) and notify host of new player joining
-	# # in NotificationLabel, 
 
 	# code by Gemini:
-	var connection_url = "wss://" + Address + ":" + str(port)
-	# var connection_url = Address
-	print("Connecting to: ", connection_url)
 
-	var error = peer.create_client(connection_url)
-	if error != OK:
-		print("Cannot connect to server!", error)
-		return
+	match testingType:
+		TestingType.Railway:
+			var connection_url = "wss://" + Address + ":" + str(port)
+			peer = WebSocketMultiplayerPeer.new()
+			print("Connecting to cloud server: ", connection_url)
+		
+			# Call create_client with the WebSocket URL string
+			var error = peer.create_client(connection_url)
+			if error != OK:
+				print("Cannot connect to WebSocket server!", error)
+				return
+
+		TestingType.Local:
+			peer = ENetMultiplayerPeer.new()
+			
+			
+			var error = peer.create_client(Address, port)
+			if error != OK:
+				print("Cannot connect to server!", error)
+				return
+			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	
+	# var connection_url = Address
+	
 
 	multiplayer.set_multiplayer_peer(peer)
 	print("Joining server...")
@@ -188,16 +212,27 @@ func hostGame():
 	if OS.has_environment("PORT"):
 		port = OS.get_environment("PORT").to_int()
 
-	peer = WebSocketMultiplayerPeer.new()
-	var error = peer.create_server(port, "*")
+	match testingType:
+		TestingType.Railway:
+			peer = WebSocketMultiplayerPeer.new()
+			var error = peer.create_server(port, "*")
+			if error != OK:
+				print("Cannot host WebSocket server!", error)
+				return
+		TestingType.Local:
+			peer = ENetMultiplayerPeer.new()
+			var error = peer.create_server(port, MAX_PLAYERS)
+			if error != OK:
+				print("Cannot host!", error)
+				return
+			# Safely isolate ENet packet tracking properties exclusively to Local builds
+			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
-
-	if error != OK:
-		print("Cannot host!", error)
-		return
 	
 	# peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
-
+	if testingType == TestingType.Local:
+		peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
 
