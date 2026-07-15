@@ -337,7 +337,7 @@ func disconnect_all_players() -> void:
 #region rendering
 # rendering: handled by clients
 func _draw() -> void:
-	if game_state != GameState.Playing:
+	if game_state == GameState.Ended:
 		return
 	if _cursor == null:
 		return

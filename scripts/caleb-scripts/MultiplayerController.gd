@@ -316,7 +316,6 @@ func close_server():
 		multiplayer.multiplayer_peer = null
 		print("Server closed.")
 
-		print("Server closed.")
 	else:
 		print("No multiplayer peer to close.")
 
