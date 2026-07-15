@@ -221,7 +221,9 @@ func _check_target_hits() -> void:
 			continue
 
 		var target_radius: float = _get_target_radius(target)
+		
 		var distance_to_target: float = _cursor.position.distance_to(target.global_position)
+		print("checking target " + str(target.name) + " at position " + str(target.global_position) + "; distance: " + str(distance_to_target))
 		if distance_to_target <= LASER_RADIUS + target_radius:
 			_set_target_completed(target, true)
 
@@ -245,6 +247,7 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	target.set_meta("completed", completed)
+	print("target completed!")
 
 	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
 	var glow: Polygon2D = target.get_node_or_null("Glow") as Polygon2D
@@ -506,5 +509,7 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 	
 	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
 	_cursor.position = next_position
+
+	 
 	pass
 #endregion
