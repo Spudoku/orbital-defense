@@ -229,9 +229,9 @@ func hostGame():
 			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
 	
-	# peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
-	if testingType == TestingType.Local:
-		peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	# # peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
+	# if testingType == TestingType.Local:
+	# 	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
@@ -284,6 +284,8 @@ func player_connected(id):
 
 func player_disconnected(id):
 	GameManager.Players.erase(id)
+
+	# TODO: test if this is redundant code
 	var players = get_tree().get_nodes_in_group("Players")
 	for i in players:
 		if i.name == str(id):
