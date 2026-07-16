@@ -156,6 +156,7 @@ func _on_join_button_button_down() -> void:
 				print("Cannot connect to server!", error)
 				return
 			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+			
 	
 	# var connection_url = Address
 	
@@ -178,10 +179,11 @@ func _on_host_button_button_down() -> void:
 
 	hostButton.disabled = true
 	joinButton.disabled = true
-
-	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
 	# TODO: create server
 	hostGame()
+	
+	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
+	
 
 	pass # Replace with function body.
 

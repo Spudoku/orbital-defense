@@ -56,6 +56,7 @@ var game_state: GameState = GameState.Playing
 @onready var _score_label: Label = $HUD/ScoreLabel
 @onready var _target_label: Label = $HUD/TargetLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
+@onready var clientLabel: Label = $HUD/ClientLabel
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -301,8 +302,16 @@ func game_end() -> void:
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
-		GameManager.clear_game_state()
-		queue_free() # free the level node
+		# GameManager.clear_game_state()
+		# Check if this server is a headless dedicated server (like on Railway)
+		if DisplayServer.get_name() == "headless":
+			print("Dedicated server: freeing level...")
+			queue_free() # Safely destroy the level node on the cloud machine
+		else:
+			print("Host-client server: returning to menu...")
+			back_to_menu() # Local host-client needs to restore their menu!
+			queue_free()
+		
 	else:
 		back_to_menu()
 		# clear game manager fields
@@ -429,14 +438,14 @@ func _move_cursor(delta: float) -> void:
 	if my_id == GameManager.player2:
 		movement.y = Input.get_axis("move_up", "move_down")
 
-	if not updated_roles:
+	if not updated_roles and clientLabel != null:
 		if GameManager.player1 != 0 and GameManager.player2 != 0: # if I don't do this, then there is a race condition where player1/player2 aren't initialized
-			# if my_id == GameManager.player1:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
-			# elif my_id == GameManager.player2:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
-			# else:
-			# 	clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
+			if my_id == GameManager.player1:
+				clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
+			elif my_id == GameManager.player2:
+				clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
+			else:
+				clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
 			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:
