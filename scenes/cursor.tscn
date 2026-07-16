@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://cel15onxxfeym"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_d7ugn"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+
+[node name="Cursor" type="Node2D" unique_id=288916131]
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1500826929]
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1359759773]
+replication_config = SubResource("SceneReplicationConfig_d7ugn")

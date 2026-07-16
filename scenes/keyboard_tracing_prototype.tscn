@@ -1,68 +1,110 @@
 [gd_scene format=3 uid="uid://pfo1m1ud0227"]
 
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
-[ext_resource type="PackedScene" path="res://scenes/target_circle.tscn" id="2_target"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
+[ext_resource type="Texture2D" uid="uid://d1pe36wcp1n83" path="res://assets/cockpit_player_1.png" id="4_cockpit1"]
 
-[node name="SharedCursorPrototype" type="Node2D" unique_id=1750839187]
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_x50nh"]
+properties/0/path = NodePath(".:score")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:energy")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:completed_targets")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:asteroid_time_remaining")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+properties/4/path = NodePath(".:missed_asteroids")
+properties/4/spawn = true
+properties/4/replication_mode = 1
+
+[node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
+
+[node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]
 
 [node name="Targets" type="Node2D" parent="." unique_id=832847295]
 
-[node name="Target1" parent="Targets" unique_id=1064801929 instance=ExtResource("2_target")]
-position = Vector2(250, 220)
-
-[node name="Target2" parent="Targets" unique_id=185791570 instance=ExtResource("2_target")]
-position = Vector2(605, 137)
-
-[node name="Target3" parent="Targets" unique_id=1372721760 instance=ExtResource("2_target")]
-position = Vector2(767, 349)
-
-[node name="Target4" parent="Targets" unique_id=755889019 instance=ExtResource("2_target")]
-position = Vector2(350, 435)
-
-[node name="Target5" parent="Targets" unique_id=1382404750 instance=ExtResource("2_target")]
-position = Vector2(541, 298)
-
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1273282158]
 
+[node name="CockpitFrame" type="TextureRect" parent="HUD" unique_id=345461023]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_cockpit1")
+expand_mode = 1
+
 [node name="TitleLabel" type="Label" parent="HUD" unique_id=529609257]
-offset_left = 24.0
-offset_top = 18.0
-offset_right = 360.0
-offset_bottom = 50.0
+offset_left = 552.0
+offset_top = 249.0
+offset_right = 890.0
+offset_bottom = 283.0
 theme_override_colors/font_color = Color(0.86, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 24
-text = "Shared Cursor Prototype"
+text = "Asteroid gameplay Prototype"
 
 [node name="ScoreLabel" type="Label" parent="HUD" unique_id=847284010]
-offset_left = 24.0
-offset_top = 54.0
-offset_right = 180.0
-offset_bottom = 82.0
+offset_left = 564.0
+offset_top = 282.0
+offset_right = 720.0
+offset_bottom = 310.0
 theme_override_colors/font_color = Color(0.72, 0.86, 0.94, 1)
 theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
 [node name="TargetLabel" type="Label" parent="HUD" unique_id=158256541]
-offset_left = 24.0
-offset_top = 82.0
-offset_right = 220.0
-offset_bottom = 110.0
+offset_left = 565.0
+offset_top = 322.0
+offset_right = 761.0
+offset_bottom = 350.0
 theme_override_colors/font_color = Color(0.72, 0.86, 0.94, 1)
 theme_override_font_sizes/font_size = 20
 text = "Targets: 0/5"
 
+[node name="TimerLabel" type="Label" parent="HUD" unique_id=91853847]
+offset_left = 565.0
+offset_top = 350.0
+offset_right = 761.0
+offset_bottom = 378.0
+theme_override_colors/font_color = Color(1, 0.82, 0.16, 1)
+theme_override_font_sizes/font_size = 20
+text = "Asteroid: 20.0s"
+
+[node name="MissLabel" type="Label" parent="HUD" unique_id=904657027]
+offset_left = 565.0
+offset_top = 378.0
+offset_right = 761.0
+offset_bottom = 406.0
+theme_override_colors/font_color = Color(1, 0.42, 0.38, 1)
+theme_override_font_sizes/font_size = 20
+text = "Missed: 0"
+
 [node name="EnergyDisplay" parent="HUD" unique_id=1635434377 instance=ExtResource("3_energy")]
-layout_mode = 3
-anchors_preset = 3
-anchor_left = 1.0
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
-anchor_right = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -245.0
-offset_top = -72.0
-offset_right = -25.0
-offset_bottom = -25.0
-grow_horizontal = 0
+offset_left = -181.0
+offset_top = -294.0
+offset_right = 159.0
+offset_bottom = -238.0
+grow_horizontal = 2
 grow_vertical = 0
+
+[node name="MultiplayerSpawner_targets" type="MultiplayerSpawner" parent="." unique_id=1955720186]
+_spawnable_scenes = PackedStringArray("uid://dmkyhxf84ps2n")
+spawn_path = NodePath("../Targets")
+
+[node name="MultiplayerSpawner_cursor" type="MultiplayerSpawner" parent="." unique_id=819068641]
+_spawnable_scenes = PackedStringArray("uid://cel15onxxfeym")
+spawn_path = NodePath("..")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1222954793]
+replication_config = SubResource("SceneReplicationConfig_x50nh")
