@@ -5,13 +5,13 @@ const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 const MENU_SCENE = preload("res://scenes/control.tscn")
 
-const VIEW_SIZE = Vector2(960, 640)
+const VIEW_SIZE = Vector2(1920, 1080)
 const CURSOR_BOX_SIZE = 36.0
 const CURSOR_SPEED = 280.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
-const ENERGY_DRAIN_PER_SECOND = 15.0
+const ENERGY_DRAIN_PER_SECOND = 10.0
 
 # target-related constants
 const TARGET_COUNT = 5
@@ -362,8 +362,6 @@ func _draw() -> void:
 		return
 	if _cursor == null:
 		return
-	draw_rect(Rect2(Vector2.ZERO, VIEW_SIZE), Color(0.015, 0.018, 0.032), true)
-	_draw_grid()
 	_draw_laser()
 	_draw_cursor_box()
 
@@ -387,13 +385,6 @@ func _update_laser_line() -> void:
 	if last_point.distance_to(_cursor.position) >= LINE_POINT_MIN_DISTANCE:
 		_current_line.add_point(_cursor.position)
 
-# rendering: handled by clients
-func _draw_grid() -> void:
-	var grid_color: Color = Color(0.12, 0.19, 0.25, 0.28)
-	for x in range(0, int(VIEW_SIZE.x) + 1, 40):
-		draw_line(Vector2(x, 0), Vector2(x, VIEW_SIZE.y), grid_color, 1.0)
-	for y in range(0, int(VIEW_SIZE.y) + 1, 40):
-		draw_line(Vector2(0, y), Vector2(VIEW_SIZE.x, y), grid_color, 1.0)
 
 # rendering: handled by clients
 func _draw_laser() -> void:
@@ -433,8 +424,10 @@ func _move_cursor(delta: float) -> void:
 	
 	# player 1: horizontal input
 	if my_id == GameManager.player1:
-		movement.x = Input.get_axis("move_left", "move_right")
-		
+		if Input.is_key_pressed(KEY_LEFT):
+			movement.x -= 1.0
+		if Input.is_key_pressed(KEY_RIGHT):
+			movement.x += 1.0
 	if my_id == GameManager.player2:
 		movement.y = Input.get_axis("move_up", "move_down")
 

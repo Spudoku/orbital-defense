@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://pfo1m1ud0227"]
 
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
+[ext_resource type="Texture2D" uid="uid://b2t42vwk6unus" path="res://assets/background/StarsFinal.png" id="2_hju85"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_x50nh"]
@@ -16,6 +17,12 @@ properties/2/replication_mode = 1
 
 [node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
+
+[node name="Background" type="Sprite2D" parent="." unique_id=1273278089]
+z_index = -1
+position = Vector2(1016.99994, 67.99617)
+scale = Vector2(2.0339658, 1.9158505)
+texture = ExtResource("2_hju85")
 
 [node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]
 
