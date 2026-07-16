@@ -294,13 +294,17 @@ func game_end() -> void:
 		# send all clients back to main menu
 	set_process(false)
 	set_physics_process(false)
-	back_to_menu()
+	
 	GameManager.clear_game_state()
 
 
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
+		GameManager.clear_game_state()
+		queue_free() # free the level node
+	else:
+		back_to_menu()
 		# clear game manager fields
 		
 	
