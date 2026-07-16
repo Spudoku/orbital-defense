@@ -7,7 +7,7 @@ enum TestingType {
 
 #region export
 
-@export var testingType: TestingType
+@export var testingType: TestingType = TestingType.Railway
 @export var gameScene: PackedScene
 
 
