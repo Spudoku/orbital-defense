@@ -35,7 +35,8 @@ enum GameState {
 #endregion
 
 var _cursor: Node2D
-# var _cursor_position: Vector2 = VIEW_SIZE * 0.5
+
+@export var _cursor_position: Vector2 # tracked on the server...
 @export var score: int = 0
 @export var energy: float = MAX_ENERGY
 @export var completed_targets: int = 0
@@ -55,6 +56,7 @@ var game_state: GameState = GameState.Playing
 @onready var _score_label: Label = $HUD/ScoreLabel
 @onready var _target_label: Label = $HUD/TargetLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
+@onready var clientLabel: Label = $HUD/ClientLabel
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -88,6 +90,9 @@ func _ready() -> void:
 func instantiate_cursor() -> void:
 	_cursor = CURSOR_SCENE.instantiate()
 	_cursor.position = VIEW_SIZE * 0.5
+
+	if multiplayer.is_server():
+		_cursor_position = _cursor.position
 	# _camera.position = _cursor_position
 	
 	add_child(_cursor)
@@ -128,11 +133,11 @@ func _process(delta: float) -> void:
 		# camera position: handled by server
 		# _camera.position = _cursor_position
 
-		# game logic: handled by server
-		# TODO: properly check if one (or both) players are pressing
-		# the spacebar, then draw the laser for both clients
-		# 
-		_laser_active = Input.is_key_pressed(KEY_SPACE)
+		
+		# TODO: sync with clients
+		var laser_pressed = Input.is_key_pressed(KEY_SPACE)
+
+		request_laser_state.rpc(laser_pressed)
 
 		if _laser_active:
 			_check_target_hits()
@@ -145,6 +150,7 @@ func _process(delta: float) -> void:
 			energy = MAX_ENERGY
 			_round_flash = 1.0
 			_reset_targets()
+			_clear_laser_line()
 
 		_round_flash = maxf(0.0, _round_flash - delta * 2.0)
 
@@ -221,7 +227,9 @@ func _check_target_hits() -> void:
 			continue
 
 		var target_radius: float = _get_target_radius(target)
-		var distance_to_target: float = _cursor.position.distance_to(target.global_position)
+		
+		var distance_to_target: float = _cursor_position.distance_to(target.global_position)
+		# print("checking target " + str(target.name) + " at position " + str(target.global_position) + "; distance: " + str(distance_to_target))
 		if distance_to_target <= LASER_RADIUS + target_radius:
 			_set_target_completed(target, true)
 
@@ -245,6 +253,7 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 	if not multiplayer.is_server():
 		return
 	target.set_meta("completed", completed)
+	print("target completed!")
 
 	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
 	var glow: Polygon2D = target.get_node_or_null("Glow") as Polygon2D
@@ -286,13 +295,25 @@ func game_end() -> void:
 		# send all clients back to main menu
 	set_process(false)
 	set_physics_process(false)
-	back_to_menu()
+	
 	GameManager.clear_game_state()
 
 
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
+		# GameManager.clear_game_state()
+		# Check if this server is a headless dedicated server (like on Railway)
+		if DisplayServer.get_name() == "headless":
+			print("Dedicated server: freeing level...")
+			queue_free() # Safely destroy the level node on the cloud machine
+		else:
+			print("Host-client server: returning to menu...")
+			back_to_menu() # Local host-client needs to restore their menu!
+			queue_free()
+		
+	else:
+		back_to_menu()
 		# clear game manager fields
 		
 	
@@ -412,25 +433,19 @@ func _move_cursor(delta: float) -> void:
 	
 	# player 1: horizontal input
 	if my_id == GameManager.player1:
-		if Input.is_key_pressed(KEY_A):
-			movement.x -= 1.0
-		if Input.is_key_pressed(KEY_D):
-			movement.x += 1.0
+		movement.x = Input.get_axis("move_left", "move_right")
+		
 	if my_id == GameManager.player2:
-		# player 2: vertical input
-		if Input.is_key_pressed(KEY_UP):
-			movement.y -= 1.0
-		if Input.is_key_pressed(KEY_DOWN):
-			movement.y += 1.0
+		movement.y = Input.get_axis("move_up", "move_down")
 
-	if not updated_roles:
+	if not updated_roles and clientLabel != null:
 		if GameManager.player1 != 0 and GameManager.player2 != 0: # if I don't do this, then there is a race condition where player1/player2 aren't initialized
-			# if my_id == GameManager.player1:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
-			# elif my_id == GameManager.player2:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
-			# else:
-			# 	clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
+			if my_id == GameManager.player1:
+				clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
+			elif my_id == GameManager.player2:
+				clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
+			else:
+				clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
 			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:
@@ -506,5 +521,31 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 	
 	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
 	_cursor.position = next_position
+	_cursor_position = _cursor.position
+	 
+	pass
+
+@rpc("any_peer", "call_local", "unreliable")
+func request_laser_state(pressed: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	
+	var sender_id = multiplayer.get_remote_sender_id()
+	GameManager._active_laser_peers[sender_id] = pressed
+
+	var any_button_down = false
+	for peer_id in GameManager._active_laser_peers:
+		if GameManager._active_laser_peers[peer_id] == true:
+			any_button_down = true
+			break
+	
+	if _laser_active != any_button_down:
+		_laser_active = any_button_down
+		sync_laser_active(any_button_down)
+	pass
+
+@rpc("authority", "call_local", "unreliable")
+func sync_laser_active(active: bool) -> void:
+	_laser_active = active
 	pass
 #endregion
