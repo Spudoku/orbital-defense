@@ -22,3 +22,4 @@ func clear_game_state() -> void:
 	player2 = -1
 	Players.clear()
 	player_ids.clear()
+	_active_laser_peers.clear()

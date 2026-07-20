@@ -1,7 +1,21 @@
-[gd_scene format=3 uid="uid://dt88x8ynwkq76"]
+[gd_scene load_steps=15 format=3 uid="uid://dt88x8ynwkq76"]
 
 [ext_resource type="Script" uid="uid://bcvegmotq3prb" path="res://scripts/caleb-scripts/MultiplayerController.gd" id="1_sjmnu"]
 [ext_resource type="PackedScene" uid="uid://pfo1m1ud0227" path="res://scenes/keyboard_tracing_prototype.tscn" id="2_r67kn"]
+[ext_resource type="Texture2D" path="res://assets/main_menu_background.png" id="3_menu"]
+[ext_resource type="Texture2D" path="res://assets/menu_username.png" id="4_username"]
+[ext_resource type="Texture2D" path="res://assets/menu_host.png" id="5_host"]
+[ext_resource type="Texture2D" path="res://assets/menu_host_pressed.png" id="6_host_pressed"]
+[ext_resource type="Texture2D" path="res://assets/menu_join.png" id="7_join"]
+[ext_resource type="Texture2D" path="res://assets/menu_join_pressed.png" id="8_join_pressed"]
+[ext_resource type="Texture2D" path="res://assets/menu_start.png" id="9_start"]
+[ext_resource type="Texture2D" path="res://assets/menu_start_pressed.png" id="10_start_pressed"]
+[ext_resource type="Texture2D" path="res://assets/menu_credits.png" id="11_credits"]
+[ext_resource type="Texture2D" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
+[ext_resource type="Texture2D" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_clear"]
+bg_color = Color(1, 1, 1, 0)
 
 [node name="Control" type="Control" unique_id=1226847817]
 layout_mode = 3
@@ -13,74 +27,141 @@ grow_vertical = 2
 script = ExtResource("1_sjmnu")
 gameScene = ExtResource("2_r67kn")
 
-[node name="RoomCode" type="LineEdit" parent="." unique_id=1747149072]
+[node name="MenuCanvas" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="MenuBackground" type="TextureRect" parent="MenuCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_menu")
+expand_mode = 1
+
+[node name="RoomCode" type="LineEdit" parent="MenuCanvas" unique_id=1747149072]
 visible = false
 layout_mode = 0
-offset_left = 485.0
-offset_top = 126.0
-offset_right = 671.0
-offset_bottom = 157.0
+offset_left = 748.0
+offset_top = 255.0
+offset_right = 1172.0
+offset_bottom = 336.0
 placeholder_text = "Room code"
 
-[node name="Username" type="LineEdit" parent="." unique_id=547826068]
+[node name="UsernameBackground" type="TextureRect" parent="MenuCanvas"]
 layout_mode = 0
-offset_left = 481.0
-offset_top = 172.0
-offset_right = 673.5
-offset_bottom = 203.0
-placeholder_text = "Enter username"
+offset_left = 748.0
+offset_top = 255.0
+offset_right = 1172.0
+offset_bottom = 336.0
+mouse_filter = 2
+texture = ExtResource("4_username")
 
-[node name="Label" type="Label" parent="." unique_id=174060855]
+[node name="Username" type="LineEdit" parent="MenuCanvas" unique_id=547826068]
 layout_mode = 0
-offset_left = 302.0
-offset_top = 434.0
-offset_right = 863.0
-offset_bottom = 544.0
+offset_left = 748.0
+offset_top = 255.0
+offset_right = 1172.0
+offset_bottom = 336.0
+mouse_default_cursor_shape = 1
+theme_override_colors/font_color = Color(1, 0.964706, 0.964706, 1)
+theme_override_colors/font_placeholder_color = Color(1, 0.964706, 0.964706, 0.75)
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_input_clear")
+theme_override_styles/focus = SubResource("StyleBoxFlat_input_clear")
+placeholder_text = "Username"
+alignment = 1
+max_length = 24
+
+[node name="Label" type="Label" parent="MenuCanvas" unique_id=174060855]
+layout_mode = 0
+offset_left = 700.0
+offset_top = 340.0
+offset_right = 1220.0
+offset_bottom = 380.0
+theme_override_colors/font_color = Color(1, 0.92, 0.92, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 22
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="HostButton" type="Button" parent="." unique_id=1671199399]
+[node name="HostButton" type="TextureButton" parent="MenuCanvas" unique_id=1671199399]
 layout_mode = 0
-offset_left = 528.0
-offset_top = 227.0
-offset_right = 615.0
-offset_bottom = 258.0
-text = "Host"
+offset_left = 846.0
+offset_top = 387.0
+offset_right = 1074.0
+offset_bottom = 468.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5_host")
+texture_pressed = ExtResource("6_host_pressed")
+texture_hover = ExtResource("5_host")
 
-[node name="JoinButton" type="Button" parent="." unique_id=549165552]
+[node name="NotificationLabel" type="Label" parent="MenuCanvas" unique_id=1176623066]
 layout_mode = 0
-offset_left = 530.0
-offset_top = 291.0
-offset_right = 617.0
-offset_bottom = 322.0
-text = "Join Game"
-
-[node name="CancelButton" type="Button" parent="." unique_id=9217626]
-layout_mode = 0
-offset_left = 532.0
-offset_top = 377.0
-offset_right = 619.0
-offset_bottom = 408.0
-text = "Cancel"
-
-[node name="StartGameButton" type="Button" parent="." unique_id=2145939688]
-layout_mode = 0
-offset_left = 525.0
-offset_top = 327.0
-offset_right = 621.0
-offset_bottom = 363.0
-text = "Start Game"
-
-[node name="NotificationLabel" type="Label" parent="." unique_id=1176623066]
-layout_mode = 0
-offset_left = 804.0
-offset_top = 263.0
-offset_right = 1134.0
-offset_bottom = 564.0
+offset_left = 700.0
+offset_top = 478.0
+offset_right = 1220.0
+offset_bottom = 525.0
+theme_override_colors/font_color = Color(0.78, 0.9, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 20
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 3
 
-[connection signal="button_down" from="HostButton" to="." method="_on_host_button_button_down"]
-[connection signal="button_down" from="JoinButton" to="." method="_on_join_button_button_down"]
-[connection signal="button_down" from="CancelButton" to="." method="_on_cancel_button_button_down"]
-[connection signal="button_down" from="StartGameButton" to="." method="_on_start_game_button_button_down"]
+[node name="JoinButton" type="TextureButton" parent="MenuCanvas" unique_id=549165552]
+layout_mode = 0
+offset_left = 775.0
+offset_top = 541.0
+offset_right = 1145.0
+offset_bottom = 629.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("7_join")
+texture_pressed = ExtResource("8_join_pressed")
+texture_hover = ExtResource("7_join")
+
+[node name="StartGameButton" type="TextureButton" parent="MenuCanvas" unique_id=2145939688]
+layout_mode = 0
+offset_left = 846.0
+offset_top = 652.0
+offset_right = 1074.0
+offset_bottom = 733.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("9_start")
+texture_pressed = ExtResource("10_start_pressed")
+texture_hover = ExtResource("9_start")
+
+[node name="CreditsButton" type="TextureButton" parent="MenuCanvas"]
+layout_mode = 0
+offset_left = 836.0
+offset_top = 755.0
+offset_right = 1086.0
+offset_bottom = 836.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("11_credits")
+texture_pressed = ExtResource("12_credits_pressed")
+texture_hover = ExtResource("11_credits")
+
+[node name="CancelButton" type="TextureButton" parent="MenuCanvas" unique_id=9217626]
+layout_mode = 0
+offset_left = 846.0
+offset_top = 905.0
+offset_right = 1074.0
+offset_bottom = 985.0
+mouse_default_cursor_shape = 2
+texture_pressed = ExtResource("13_cancel_pressed")
+
+[connection signal="pressed" from="MenuCanvas/HostButton" to="." method="_on_host_button_button_down"]
+[connection signal="pressed" from="MenuCanvas/JoinButton" to="." method="_on_join_button_button_down"]
+[connection signal="pressed" from="MenuCanvas/CancelButton" to="." method="_on_cancel_button_button_down"]
+[connection signal="pressed" from="MenuCanvas/StartGameButton" to="." method="_on_start_game_button_button_down"]
