@@ -48,7 +48,7 @@ var laser_animation: AnimatedSprite2D = null
 var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
-var children: Array[Node] = []
+var children: Array[Node] = [] # this is to store the children of the cursor node
 
 var updated_roles = false # this is to check if controls have been properly assigned
 
@@ -99,6 +99,8 @@ func instantiate_cursor() -> void:
 	if multiplayer.is_server():
 		_cursor_position = _cursor.position
 	# _camera.position = _cursor_position
+
+
 	children = _cursor.get_children()
 	
 	add_child(_cursor)
@@ -110,6 +112,7 @@ func connect_cursor(node: Node) -> void:
 	laser_animation = null
 	call_deferred("_ensure_laser_animation")
 
+# ensure that the laser animation node is valid and ready to use
 func _ensure_laser_animation() -> void:
 	if not is_instance_valid(_cursor):
 		laser_animation = null
@@ -133,6 +136,7 @@ func _play_laser_animation(animation_name: String) -> void:
 	laser_animation.play(animation_name)
 	laser_animation.frame = 0
 
+# get the laser animation node from the cursor node
 func _get_laser_animation_node() -> AnimatedSprite2D:
 	for i in range(_cursor.get_child_count()):
 		var child = _cursor.get_child(i)
@@ -184,6 +188,7 @@ func _process(delta: float) -> void:
 		_laser_was_active = _laser_active
 		_laser_active = _laser_state
 
+		# handle laser animation state changes
 		if _laser_active and not _laser_was_active:
 			_on_laser_active_true()
 		elif not _laser_active and _laser_was_active:
@@ -569,6 +574,8 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 	_cursor.position = next_position
 	pass
 
+# laser animation functions 
+# activation: handled by clients, but synchronized via server
 @rpc("any_peer", "call_local", "unreliable")
 func _request_laser_state(active: bool) -> void:
 	if not multiplayer.is_server():
