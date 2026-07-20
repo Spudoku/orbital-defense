@@ -18,10 +18,10 @@ properties/2/replication_mode = 1
 [node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
 
-[node name="Background" type="Sprite2D" parent="." unique_id=1273278089]
+[node name="Background" type="Sprite2D" parent="." unique_id=1836493077]
 z_index = -1
-position = Vector2(1016.99994, 67.99617)
-scale = Vector2(2.0339658, 1.9158505)
+position = Vector2(1017, 67.996)
+scale = Vector2(1.916, 1.916)
 texture = ExtResource("2_hju85")
 
 [node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]

@@ -5,27 +5,27 @@
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_ndevg"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(1152, 0, 128, 256)
+region = Rect2(1024, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_n5qf0"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(1280, 0, 128, 256)
+region = Rect2(1152, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_pey64"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(1408, 0, 128, 256)
+region = Rect2(1280, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xjntw"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(768, 0, 128, 256)
+region = Rect2(1408, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xl2q8"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(896, 0, 128, 256)
+region = Rect2(768, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_km28a"]
 atlas = ExtResource("2_s0nli")
-region = Rect2(1024, 0, 128, 256)
+region = Rect2(896, 0, 128, 256)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_snjn8"]
 atlas = ExtResource("2_s0nli")
@@ -51,7 +51,7 @@ region = Rect2(512, 0, 128, 256)
 atlas = ExtResource("2_s0nli")
 region = Rect2(640, 0, 128, 256)
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_1eco6"]
+[sub_resource type="SpriteFrames" id="SpriteFrames_w4aas"]
 animations = [{
 "frames": [{
 "duration": 1.0,
@@ -62,15 +62,15 @@ animations = [{
 }, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_pey64")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xjntw")
 }],
 "loop": false,
 "name": &"laser_end",
 "speed": 5.0
 }, {
 "frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_xjntw")
-}, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_xl2q8")
 }, {
@@ -114,15 +114,15 @@ properties/0/replication_mode = 1
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1500826929]
 
-[node name="Laser" type="AnimatedSprite2D" parent="Camera2D" unique_id=1739854030]
-position = Vector2(-5, 179.00002)
-scale = Vector2(2.984375, 1.9140625)
-sprite_frames = SubResource("SpriteFrames_1eco6")
-animation = &"laser_end"
-
-[node name="Foreground1" type="Sprite2D" parent="Camera2D" unique_id=1390750208]
-scale = Vector2(1.0158924, 1.0382695)
+[node name="Foreground" type="Sprite2D" parent="Camera2D" unique_id=1822071007]
+scale = Vector2(1.038, 1.038)
 texture = ExtResource("1_1eco6")
+
+[node name="Laser" type="AnimatedSprite2D" parent="Camera2D" unique_id=1325919346]
+position = Vector2(-4, 160)
+scale = Vector2(1.738125, 1.6560937)
+sprite_frames = SubResource("SpriteFrames_w4aas")
+animation = &"laser_end"
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1359759773]
 replication_config = SubResource("SceneReplicationConfig_d7ugn")
