@@ -41,9 +41,14 @@ var _cursor: Node2D
 @export var energy: float = MAX_ENERGY
 @export var completed_targets: int = 0
 var _laser_active: bool = false
+var _laser_was_active: bool = false
+var _laser_state: bool = false
+var _laser_pressing: bool = false
+var laser_animation: AnimatedSprite2D = null
 var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
+var children: Array[Node] = []
 
 var updated_roles = false # this is to check if controls have been properly assigned
 
@@ -94,6 +99,7 @@ func instantiate_cursor() -> void:
 	if multiplayer.is_server():
 		_cursor_position = _cursor.position
 	# _camera.position = _cursor_position
+	children = _cursor.get_children()
 	
 	add_child(_cursor)
 
@@ -101,7 +107,42 @@ func instantiate_cursor() -> void:
 func connect_cursor(node: Node) -> void:
 	print("Connecting cursor...")
 	_cursor = node
-	pass
+	laser_animation = null
+	call_deferred("_ensure_laser_animation")
+
+func _ensure_laser_animation() -> void:
+	if not is_instance_valid(_cursor):
+		laser_animation = null
+		return
+
+	if laser_animation != null and is_instance_valid(laser_animation):
+		return
+
+	laser_animation = _get_laser_animation_node()
+	if laser_animation != null:
+		laser_animation.visible = false
+		laser_animation.stop()
+
+func _play_laser_animation(animation_name: String) -> void:
+	_ensure_laser_animation()
+	if laser_animation == null:
+		return
+
+	laser_animation.visible = true
+	laser_animation.stop()
+	laser_animation.play(animation_name)
+	laser_animation.frame = 0
+
+func _get_laser_animation_node() -> AnimatedSprite2D:
+	for i in range(_cursor.get_child_count()):
+		var child = _cursor.get_child(i)
+		if child.name == "Camera2D":
+			for grandchild in child.get_children():
+				if grandchild.name == "Laser" and grandchild is AnimatedSprite2D:
+					return grandchild as AnimatedSprite2D
+
+	return null
+
 
 # create laser-target Nodes
 func instantiate_targets() -> void:
@@ -133,11 +174,24 @@ func _process(delta: float) -> void:
 		# camera position: handled by server
 		# _camera.position = _cursor_position
 
-		
-		# TODO: sync with clients
-		var laser_pressed = Input.is_key_pressed(KEY_SPACE)
+		# game logic: handled by server
+		# synchronize laser activation via the server so all clients see the same animation
+		var local_pressing: bool = Input.is_key_pressed(KEY_SPACE)
+		if local_pressing != _laser_pressing:
+			_laser_pressing = local_pressing
+			_request_laser_state.rpc(_laser_pressing)
 
-		request_laser_state.rpc(laser_pressed)
+		_laser_was_active = _laser_active
+		_laser_active = _laser_state
+
+		if _laser_active and not _laser_was_active:
+			_on_laser_active_true()
+		elif not _laser_active and _laser_was_active:
+			_on_laser_active_false()
+		elif _laser_active:
+			_on_laser_active_hold()
+		else:
+			_on_laser_inactive()
 
 		if _laser_active:
 			_check_target_hits()
@@ -372,7 +426,7 @@ func _update_laser_line() -> void:
 
 	if _current_line == null:
 		_current_line = Line2D.new()
-		_current_line.default_color = Color.AQUA
+		_current_line.default_color = Color.DODGER_BLUE
 		_current_line.width = 10.0
 		_current_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 		_current_line.end_cap_mode = Line2D.LINE_CAP_ROUND
@@ -504,7 +558,6 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	
-
 	var next_position: Vector2 = _cursor.position + movement.normalized() * CURSOR_SPEED * delta
 	next_position.x = clampf(next_position.x, CURSOR_BOX_SIZE * 0.5, VIEW_SIZE.x - CURSOR_BOX_SIZE * 0.5)
 	next_position.y = clampf(next_position.y, CURSOR_BOX_SIZE * 0.5, VIEW_SIZE.y - CURSOR_BOX_SIZE * 0.5)
@@ -514,31 +567,37 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 	
 	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
 	_cursor.position = next_position
-	_cursor_position = _cursor.position
-	 
 	pass
 
 @rpc("any_peer", "call_local", "unreliable")
-func request_laser_state(pressed: bool) -> void:
+func _request_laser_state(active: bool) -> void:
 	if not multiplayer.is_server():
 		return
-	
-	var sender_id = multiplayer.get_remote_sender_id()
-	GameManager._active_laser_peers[sender_id] = pressed
+	_sync_laser_state.rpc(active)
 
-	var any_button_down = false
-	for peer_id in GameManager._active_laser_peers:
-		if GameManager._active_laser_peers[peer_id] == true:
-			any_button_down = true
-			break
-	
-	if _laser_active != any_button_down:
-		_laser_active = any_button_down
-		sync_laser_active(any_button_down)
-	pass
+@rpc("any_peer", "call_local", "unreliable")
+func _sync_laser_state(active: bool) -> void:
+	_laser_state = active
 
-@rpc("authority", "call_local", "unreliable")
-func sync_laser_active(active: bool) -> void:
-	_laser_active = active
-	pass
-#endregion
+func _on_laser_active_true() -> void:
+	_play_laser_animation("laser_start")
+
+func _on_laser_active_hold() -> void:
+	_ensure_laser_animation()
+	if laser_animation == null:
+		return
+	if laser_animation.is_playing() and laser_animation.animation == "laser_start":
+		return
+	if laser_animation.animation != "laser_hold":
+		_play_laser_animation("laser_hold")
+
+func _on_laser_active_false() -> void:
+	_play_laser_animation("laser_end")
+
+
+func _on_laser_inactive() -> void:
+	_ensure_laser_animation()
+	if laser_animation == null:
+		return
+	if laser_animation.animation == "laser_end" and not laser_animation.is_playing():
+		laser_animation.visible = false
