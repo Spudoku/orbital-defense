@@ -7,7 +7,7 @@ enum TestingType {
 
 #region export
 
-@export var testingType: TestingType
+@export var testingType: TestingType = TestingType.Railway
 @export var gameScene: PackedScene
 
 
@@ -25,17 +25,18 @@ enum TestingType {
 #endregion
 
 #region onReady
-@onready var label = $Label
+@onready var menuCanvas = $MenuCanvas
+@onready var label = $MenuCanvas/Label
 
-@onready var hostButton = $HostButton
-@onready var joinButton = $JoinButton
-@onready var cancelButton = $CancelButton
-@onready var startGameButton = $StartGameButton
+@onready var hostButton = $MenuCanvas/HostButton
+@onready var joinButton = $MenuCanvas/JoinButton
+@onready var cancelButton = $MenuCanvas/CancelButton
+@onready var startGameButton = $MenuCanvas/StartGameButton
 
-@onready var roomCodeText = $RoomCode
-@onready var usernameText = $Username
+@onready var roomCodeText = $MenuCanvas/RoomCode
+@onready var usernameText = $MenuCanvas/Username
 
-@onready var notificationLabel = $NotificationLabel
+@onready var notificationLabel = $MenuCanvas/NotificationLabel
 #endregion
 
 # Idle: neither joining nor hosting
@@ -48,6 +49,7 @@ enum TestingType {
 
 
 const MAX_PLAYERS = 2
+const MENU_DESIGN_SIZE = Vector2(1920.0, 1080.0)
 
 var peer
 
@@ -60,6 +62,10 @@ enum LobbyState {
 var state = LobbyState.IDLE
 
 func _ready():
+	if not resized.is_connected(_fit_menu_to_window):
+		resized.connect(_fit_menu_to_window)
+	_fit_menu_to_window()
+	call_deferred("_fit_menu_to_window")
 	init_menu()
 	match testingType:
 		TestingType.Railway:
@@ -72,6 +78,18 @@ func _ready():
 	if "--server" in OS.get_cmdline_args():
 		hostGame()
 	pass
+
+
+func _fit_menu_to_window() -> void:
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+
+	var menu_scale = max(
+		size.x / MENU_DESIGN_SIZE.x,
+		size.y / MENU_DESIGN_SIZE.y
+	)
+	menuCanvas.scale = Vector2.ONE * menu_scale
+	menuCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
 
 func init_menu():
 	cancelButton.disabled = true
@@ -179,9 +197,9 @@ func _on_host_button_button_down() -> void:
 	hostButton.disabled = true
 	joinButton.disabled = true
 
-	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
 	# TODO: create server
 	hostGame()
+	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
 
 	pass # Replace with function body.
 
@@ -292,7 +310,7 @@ func player_disconnected(id):
 
 func connected_to_server():
 	# note: since this passes 1, does that mean its server authority?
-	SendPlayerData.rpc_id(1, $Username.text, multiplayer.get_unique_id())
+	SendPlayerData.rpc_id(1, usernameText.text, multiplayer.get_unique_id())
 
 	# TODO: validate roomcode.text
 	# print("Connected to server with room code", roomCodeText.text)
@@ -312,8 +330,6 @@ func close_server():
 	if multiplayer_peer and not (multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
-		print("Server closed.")
-
 		print("Server closed.")
 	else:
 		print("No multiplayer peer to close.")

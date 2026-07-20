@@ -3,7 +3,7 @@ extends Node2D
 #region constants
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
-const MENU_SCENE = preload("res://scenes/control.tscn")
+const MENU_SCENE_PATH = "res://scenes/control.tscn"
 const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
@@ -70,6 +70,7 @@ var game_state: GameState = GameState.Playing
 @onready var _miss_label: Label = $HUD/MissLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
+@onready var clientLabel: Label = $HUD/ClientLabel
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -371,16 +372,22 @@ func game_end() -> void:
 		# send all clients back to main menu
 	set_process(false)
 	set_physics_process(false)
-	back_to_menu()
 	GameManager.clear_game_state()
 
 
 	# handle things as the server
 	if multiplayer.is_server():
 		disconnect_all_players()
-		# clear game manager fields
-		
-	
+		if DisplayServer.get_name() == "headless":
+			print("Dedicated server: freeing level...")
+			queue_free()
+		else:
+			print("Host-client server: returning to menu...")
+			back_to_menu()
+			queue_free()
+	else:
+		back_to_menu()
+
 	pass
 
 func back_to_menu() -> void:
@@ -404,7 +411,8 @@ func back_to_menu() -> void:
 	else:
 		# Fallback if the menu was somehow lost
 		print("Menu not found, instantiate new one...")
-		var new_menu = MENU_SCENE.instantiate()
+		var menu_scene: PackedScene = load(MENU_SCENE_PATH)
+		var new_menu = menu_scene.instantiate()
 		get_tree().root.add_child(new_menu)
 	pass
 
@@ -553,14 +561,14 @@ func _move_cursor(delta: float) -> void:
 	if my_id == GameManager.player2:
 		movement.y = Input.get_axis("move_up", "move_down")
 
-	if not updated_roles:
+	if not updated_roles and clientLabel != null:
 		if GameManager.player1 != 0 and GameManager.player2 != 0: # if I don't do this, then there is a race condition where player1/player2 aren't initialized
-			# if my_id == GameManager.player1:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 1! You handle horizontal controls!"
-			# elif my_id == GameManager.player2:
-			# 	clientLabel.text = clientLabel.text + "\n You are player 2! You handle vertical controls!"
-			# else:
-			# 	clientLabel.text = clientLabel.text + "\n You have not been assigned controls!"
+			if my_id == GameManager.player1:
+				clientLabel.text = "Player 1: horizontal controls"
+			elif my_id == GameManager.player2:
+				clientLabel.text = "Player 2: vertical controls"
+			else:
+				clientLabel.text = "Controls not assigned"
 			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:

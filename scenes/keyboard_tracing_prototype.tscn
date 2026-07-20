@@ -98,6 +98,15 @@ offset_bottom = -238.0
 grow_horizontal = 2
 grow_vertical = 0
 
+[node name="ClientLabel" type="Label" parent="HUD" unique_id=1417146264]
+offset_left = 23.0
+offset_top = 126.0
+offset_right = 320.0
+offset_bottom = 181.0
+theme_override_colors/font_color = Color(0.86, 0.92, 1, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="MultiplayerSpawner_targets" type="MultiplayerSpawner" parent="." unique_id=1955720186]
 _spawnable_scenes = PackedStringArray("uid://dmkyhxf84ps2n")
 spawn_path = NodePath("../Targets")
