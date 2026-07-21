@@ -91,7 +91,7 @@ func _ready() -> void:
 		instantiate_targets()
 
 		instantiate_cursor()
-		_reset_targets()
+		_new_asteroid_round()
 		get_tree().create_timer(0.1).timeout.connect(assign_controls)
 		for player in GameManager.Players:
 			print("Player connected: %d" % player)
@@ -183,6 +183,16 @@ func _process(delta: float) -> void:
 
 
 #region gamelogic
+func _new_asteroid_round() -> void:
+	_reset_targets()
+	_clear_laser_line()
+
+	if multiplayer.is_server():
+		# TODO: set a timer and wait for asteroid animation
+		# to end
+		return
+
+
 # target logic: handle as server
 func _reset_targets() -> void:
 	if not multiplayer.is_server():
@@ -210,9 +220,9 @@ func _complete_asteroid() -> void:
 	score += 1
 	energy = MAX_ENERGY
 	_round_flash = 1.0
-	_clear_laser_line()
-	_reset_targets()
 
+	_new_asteroid_round()
+	
 
 func _miss_asteroid() -> void:
 	if not multiplayer.is_server():
@@ -222,8 +232,8 @@ func _miss_asteroid() -> void:
 	score = maxi(0, score - 1)
 	energy = maxf(0.0, energy - ASTEROID_MISS_ENERGY_PENALTY)
 	_round_flash = 1.0
-	_clear_laser_line()
-	_reset_targets()
+
+	_new_asteroid_round()
 
 # server only
 func _randomize_target_positions() -> void:

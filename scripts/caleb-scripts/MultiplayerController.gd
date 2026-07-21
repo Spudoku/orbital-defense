@@ -16,12 +16,7 @@ enum TestingType {
 @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
 @export var port = 443 # Standard secure web proxy port used by Railway
 
-# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-# @export var port = 443 # Standard secure web proxy port used by Railway
 
-# LOCAL TESTING ONLY
-# @export var Address = "127.0.0.1" # local server (?)
-# @export var port = 8910 # TODO: check port?
 #endregion
 
 #region onReady
@@ -252,6 +247,7 @@ func request_server_to_start():
 	if multiplayer.is_server():
 		print("Server received start request. Broadcasting to all clients...")
 		# The server calls .rpc(), which successfully broadcasts to ALL clients
+		GameManager.game_in_progress = true
 		startGame.rpc()
 
 @rpc("any_peer", "call_local")
@@ -270,6 +266,21 @@ func startGame():
 
 @rpc("any_peer")
 func SendPlayerData(playerName, id):
+	# check if game is in progress
+	if multiplayer.is_server():
+		var sender_id = multiplayer.get_unique_id()
+		if sender_id == 0:
+			sender_id = id
+
+		if GameManager.game_in_progress:
+			print("Game already in progress. Rejecting new player: ", playerName)
+			reject_connection.rpc_id(id, "Game already in progress. Please try again later.")
+			get_tree().create_timer(0.2).timeout.connect(func():
+				if multiplayer.get_peers().has(sender_id):
+					multiplayer.disconnect_peer(sender_id)
+			)
+			return
+
 	if !GameManager.Players.has(id):
 		GameManager.Players[id] = {
 			"name": playerName,
@@ -341,5 +352,13 @@ func _on_server_disconnected() -> void:
 	self.process_mode = Node.PROCESS_MODE_INHERIT
 	init_menu()
 
+@rpc("any_peer", "call_remote", "reliable")
+func reject_connection(reason: String) -> void:
+	print("Connection rejected by server: %s" % reason)
+	label.text = "Connection rejected by server: %s" % reason
 
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+	init_menu()
 #endregion
