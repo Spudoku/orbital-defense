@@ -295,6 +295,8 @@ func player_disconnected(id):
 	for i in players:
 		if i.name == str(id):
 			i.queue_free()
+	GameManager.player_ids.erase(id)
+	print("Player disconnected: %d" % id)
 
 	#TODO: restart server game state if all players disconnected
 	pass

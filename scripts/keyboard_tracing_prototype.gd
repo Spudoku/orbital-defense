@@ -82,10 +82,12 @@ func _ready() -> void:
 	_update_cockpit_frame()
 	cursor_spawner.spawned.connect(connect_cursor)
 
+
+	if not multiplayer.peer_disconnected.is_connected(player_disconnected):
+		multiplayer.peer_disconnected.connect(player_disconnected)
+
 	# handling things only the server should...
 	if multiplayer.is_server():
-		# assign_controls()
-		# _camera.position = _cursor_position
 		instantiate_targets()
 
 		instantiate_cursor()
@@ -423,6 +425,21 @@ func disconnect_all_players() -> void:
 	for player in multiplayer.get_peers():
 		multiplayer.disconnect_peer(player)
 
+func player_disconnected(id):
+	GameManager.Players.erase(id)
+	GameManager.player_ids.erase(id)
+	print("Player disconnected: %d" % id)
+	
+	#TODO: restart server game state if all players disconnected
+
+	if GameManager.Players.size() == 0:
+		print("All players disconnected, returning to menu...")
+		back_to_menu()
+	else:
+		print("Remaining players: %s" % str(GameManager.Players.keys()))
+		updated_roles = false
+		assign_controls() # reassign controls if a player disconnects
+	pass
 
 #endregion
 
@@ -598,6 +615,7 @@ func assign_controls() -> void:
 			GameManager.sync_controls.rpc(GameManager.player_ids[0], GameManager.player_ids[0])
 			print("There is exactly one player, who will control both horizontal and vertical axes.")
 			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
+			
 			pass
 		2:
 			# First connected player controls horizontal movement.
