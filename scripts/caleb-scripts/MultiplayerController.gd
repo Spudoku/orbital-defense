@@ -130,6 +130,7 @@ func _on_cancel_button_button_down() -> void:
 
 
 func _on_join_button_button_down() -> void:
+	# TODO: check if server is "busy" or full
 	if usernameText.text == "":
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
@@ -306,6 +307,8 @@ func player_disconnected(id):
 	for i in players:
 		if i.name == str(id):
 			i.queue_free()
+
+	#TODO: restart server game state if all players disconnected
 	pass
 
 func connected_to_server():
