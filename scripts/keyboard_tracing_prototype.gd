@@ -615,8 +615,6 @@ func assign_controls() -> void:
 	
 
 # move cursor based on input from client
-# TODO: fix this so that movement is always processed, but ONLY on the server;
-# currently it only handles the movement if the host calls this function
 @rpc("any_peer", "call_local", "unreliable")
 func _request_movement(movement: Vector2, delta: float) -> void:
 	if not multiplayer.is_server():

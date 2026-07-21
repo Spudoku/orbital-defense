@@ -120,9 +120,6 @@ func _on_cancel_button_button_down() -> void:
 	hostButton.disabled = false
 	joinButton.disabled = false
 
-	# TODO: destroy peer and/or disconnect from server
-	# if peer:
-	# 	peer = null
 
 	close_server()
 
@@ -135,12 +132,7 @@ func _on_join_button_button_down() -> void:
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
 		return
-	# check room code text
-	# if roomCodeText.text == "":
-	# 	print("Please enter a room code!")
-	# 	label.text = "Please enter a room code!"
-	# 	return
-	# TODO: check if room code is valid
+
 	hostButton.disabled = true
 	joinButton.disabled = true
 	
@@ -149,10 +141,6 @@ func _on_join_button_button_down() -> void:
 	state = LobbyState.JOINING
 	startGameButton.disabled = false
 
-	#TODO: connect to server
-
-
-	# code by Gemini:
 
 	match testingType:
 		TestingType.Railway:
@@ -315,9 +303,6 @@ func connected_to_server():
 	# note: since this passes 1, does that mean its server authority?
 	SendPlayerData.rpc_id(1, usernameText.text, multiplayer.get_unique_id())
 
-	# TODO: validate roomcode.text
-	# print("Connected to server with room code", roomCodeText.text)
-	# label.text = "Connected to server with room code " + roomCodeText.text
 	pass
 
 func connection_failed():
