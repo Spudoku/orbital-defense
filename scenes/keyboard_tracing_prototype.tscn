@@ -131,4 +131,5 @@ spawn_path = NodePath("..")
 replication_config = SubResource("SceneReplicationConfig_x50nh")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=912315446]
+visible = false
 sprite_frames = SubResource("SpriteFrames_f1ipo")
