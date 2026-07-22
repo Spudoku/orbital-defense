@@ -19,6 +19,7 @@ const ENERGY_DRAIN_PER_SECOND = 10.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 
+
 # target-related constants
 const TARGET_COUNT = 5
 const TARGET_SPAWN_MARGIN = 55.0
@@ -136,6 +137,10 @@ func instantiate_targets() -> void:
 
 
 # main game loop powering everything
+# process handles the following logic:
+# handle input
+# render the laser
+# if all asteroids are completed, start a new round
 func _process(delta: float) -> void:
 	if not multiplayer.has_multiplayer_peer():
 		return

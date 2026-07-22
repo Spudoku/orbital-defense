@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://ccc2vgvttoamt" path="res://assets/menu_credits.png" id="11_credits"]
 [ext_resource type="Texture2D" uid="uid://88li1w2dreu6" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
 [ext_resource type="Texture2D" uid="uid://dfln45e201chc" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
+[ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="14_vb5ih"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_clear"]
 bg_color = Color(1, 1, 1, 0)
@@ -160,6 +161,10 @@ offset_right = 1074.0
 offset_bottom = 985.0
 mouse_default_cursor_shape = 2
 texture_pressed = ExtResource("13_cancel_pressed")
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1248194271]
+stream = ExtResource("14_vb5ih")
+autoplay = true
 
 [connection signal="pressed" from="MenuCanvas/HostButton" to="." method="_on_host_button_button_down"]
 [connection signal="pressed" from="MenuCanvas/JoinButton" to="." method="_on_join_button_button_down"]
