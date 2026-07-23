@@ -4,11 +4,11 @@ extends Node2D
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 const MENU_SCENE_PATH = "res://scenes/control.tscn"
-const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
-const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
-const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
+# const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
+# const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
+# const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 const VIEW_SIZE = Vector2(2400, 1350)
-const BACKGROUND_PADDING = 1600.0
+# const BACKGROUND_PADDING = 1600.0
 const CURSOR_BOX_SIZE = 36.0
 const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
@@ -52,8 +52,11 @@ var _cursor: Node2D
 var _laser_active: bool = false
 var _laser_was_active: bool = false
 var _laser_state: bool = false
-var _laser_pressing: bool = false
-var laser_animation: AnimatedSprite2D = null
+var _local_laser_active: bool = false
+var _local_laser_was_active: bool = false
+# var _laser_pressing: bool = false
+var laser_animation_1: AnimatedSprite2D = null
+var laser_animation_2: AnimatedSprite2D = null
 var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
@@ -61,6 +64,8 @@ var children: Array[Node] = [] # this is to store the children of the cursor nod
 var _last_laser_collision_position: Vector2 = Vector2.ZERO
 var _has_last_laser_collision_position: bool = false
 var updated_roles = false # this is to check if controls have been properly assigned
+var foreground1: Sprite2D = null
+var foreground2: Sprite2D = null
 
 var game_state: GameState = GameState.Playing
 
@@ -73,7 +78,7 @@ var game_state: GameState = GameState.Playing
 @onready var _timer_label: Label = $HUD/TimerLabel
 @onready var _miss_label: Label = $HUD/MissLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
-@onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
+# @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
@@ -83,7 +88,7 @@ var game_state: GameState = GameState.Playing
 
 func _ready() -> void:
 	_update_hud()
-	_update_cockpit_frame()
+	# _update_cockpit_frame()
 	cursor_spawner.spawned.connect(connect_cursor)
 
 
@@ -127,40 +132,75 @@ func instantiate_cursor() -> void:
 func connect_cursor(node: Node) -> void:
 	print("Connecting cursor...")
 	_cursor = node
-	laser_animation = null
-	call_deferred("_ensure_laser_animation")
+	# laser_animation = null
+	# call_deferred("_ensure_laser_animation")
 
-# ensure that the laser animation node is valid and ready to use
-func _ensure_laser_animation() -> void:
-	if not is_instance_valid(_cursor):
-		laser_animation = null
-		return
-
-	if laser_animation != null and is_instance_valid(laser_animation):
-		return
-
-	laser_animation = _get_laser_animation_node()
-	if laser_animation != null:
-		laser_animation.visible = false
-		laser_animation.stop()
-
-func _play_laser_animation(animation_name: String) -> void:
-	_ensure_laser_animation()
-	if laser_animation == null:
-		return
-
-	laser_animation.visible = true
-	laser_animation.stop()
-	laser_animation.play(animation_name)
-	laser_animation.frame = 0
 	
-func _get_laser_animation_node() -> AnimatedSprite2D:
+func _get_laser1_animation_node() -> AnimatedSprite2D:
 	for i in range(_cursor.get_child_count()):
 		var child = _cursor.get_child(i)
 		if child.name == "Camera2D":
 			for grandchild in child.get_children():
-				if grandchild.name == "Laser" and grandchild is AnimatedSprite2D:
+				if grandchild.name == "Laser1" and grandchild is AnimatedSprite2D:
 					return grandchild as AnimatedSprite2D
+
+	return null
+
+func _get_laser2_animation_node() -> AnimatedSprite2D:
+	for i in range(_cursor.get_child_count()):
+		var child = _cursor.get_child(i)
+		if child.name == "Camera2D":
+			for grandchild in child.get_children():
+				if grandchild.name == "Laser2" and grandchild is AnimatedSprite2D:
+					return grandchild as AnimatedSprite2D
+
+	return null
+
+func _get_foreground1_node() -> Sprite2D:
+	for i in range(_cursor.get_child_count()):
+		var child =_cursor.get_child(i)
+		if child.name == "Camera2D":
+			for grandchild in child.get_children():
+				if grandchild.name == "Foreground1" and grandchild is Sprite2D:
+					return grandchild as Sprite2D
+
+	return null
+
+func _get_foreground2_node() -> Sprite2D:
+	for i in range(_cursor.get_child_count()):
+		var child =_cursor.get_child(i)
+		if child.name == "Camera2D":
+			for grandchild in child.get_children():
+				if grandchild.name == "Foreground2" and grandchild is Sprite2D:
+					return grandchild as Sprite2D
+
+	return null
+
+func _refresh_laser_nodes() -> void:
+	if not is_instance_valid(_cursor):
+		return
+
+	if multiplayer.get_unique_id() == GameManager.player1:
+		laser_animation_1 = _get_laser1_animation_node()
+	elif multiplayer.get_unique_id() == GameManager.player2:
+		laser_animation_2 = _get_laser2_animation_node()
+
+	foreground1 = _get_foreground1_node()
+	foreground2 = _get_foreground2_node()
+
+func _get_player_laser_animation() -> AnimatedSprite2D:
+	if not is_instance_valid(_cursor):
+		return null
+
+	var my_id = multiplayer.get_unique_id()
+	if my_id == GameManager.player1:
+		if laser_animation_1 == null or not is_instance_valid(laser_animation_1):
+			laser_animation_1 = _get_laser1_animation_node()
+		return laser_animation_1
+	elif my_id == GameManager.player2:
+		if laser_animation_2 == null or not is_instance_valid(laser_animation_2):
+			laser_animation_2 = _get_laser2_animation_node()
+		return laser_animation_2
 
 	return null
 
@@ -192,7 +232,7 @@ func _process(delta: float) -> void:
 		return
 
 	if game_state == GameState.Playing:
-		_update_cockpit_frame()
+		#_update_cockpit_frame()
 
 		# input: handled by clients
 		_move_cursor(delta)
@@ -200,21 +240,27 @@ func _process(delta: float) -> void:
 		# camera position: handled by server
 		# _camera.position = _cursor_position
 
-		var laser_pressed: bool = Input.is_action_pressed("fire_laser")
-		request_laser_state.rpc(laser_pressed)
+		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
+		request_laser_state.rpc(local_laser_pressed)
 		var previous_laser_active: bool = _laser_active
-		_laser_active = _laser_state
+		_laser_active = local_laser_pressed or _laser_state
 		_laser_was_active = previous_laser_active
 
+		var previous_local_laser_active: bool = _local_laser_active
+		_local_laser_active = local_laser_pressed
+		_local_laser_was_active = previous_local_laser_active
+
 		# handle laser animation state changes
-		if _laser_active and not _laser_was_active:
-			_on_laser_active_true()
-		elif not _laser_active and _laser_was_active:
-			_on_laser_active_false()
-		elif _laser_active:
-			_on_laser_active_hold()
+		_refresh_laser_nodes()
+		var my_laser_animation: AnimatedSprite2D = _get_player_laser_animation()
+		if _local_laser_active and not _local_laser_was_active:
+			_on_laser_active_true(my_laser_animation)
+		elif not _local_laser_active and _local_laser_was_active:
+			_on_laser_active_false(my_laser_animation)
+		elif _local_laser_active:
+			_on_laser_active_hold(my_laser_animation)
 		else:
-			_on_laser_inactive()
+			_on_laser_inactive(my_laser_animation)
 
 		if _laser_active:
 			_check_target_hits()
@@ -523,13 +569,22 @@ func _draw() -> void:
 	if _cursor == null:
 		return
 
-	var screen_size: Vector2 = get_viewport_rect().size
-	var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
-	draw_rect(visible_rect, Color.BLACK, true)
-	draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
+	# var screen_size: Vector2 = get_viewport_rect().size
+	# var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
+	# draw_rect(visible_rect, Color.BLACK, true)
+	# draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
 	_draw_laser()
 	_draw_offscreen_target_bubbles()
 	_draw_cursor_box()
+	_refresh_laser_nodes()
+	var my_id = multiplayer.get_unique_id()
+
+	if my_id == GameManager.player1:
+		foreground1.show()
+		foreground2.hide()
+	elif my_id == GameManager.player2:
+		foreground1.hide()
+		foreground2.show()
 
 func _update_laser_line() -> void:
 	# Safe guard against freed cursor
@@ -538,7 +593,10 @@ func _update_laser_line() -> void:
 
 	if _current_line == null:
 		_current_line = Line2D.new()
-		_current_line.default_color = Color.DODGER_BLUE
+		if multiplayer.get_unique_id() == GameManager.player1:
+			_current_line.default_color = Color.DODGER_BLUE
+		elif multiplayer.get_unique_id() == GameManager.player2:
+			_current_line.default_color = Color.RED
 		_current_line.width = 10.0
 		_current_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 		_current_line.end_cap_mode = Line2D.LINE_CAP_ROUND
@@ -552,15 +610,15 @@ func _update_laser_line() -> void:
 		_current_line.add_point(_cursor.position)
 
 # rendering: handled by clients
-func _draw_grid() -> void:
-	var grid_color: Color = Color(0.12, 0.19, 0.25, 0.28)
-	var start: Vector2 = Vector2(-BACKGROUND_PADDING, -BACKGROUND_PADDING)
-	var end: Vector2 = VIEW_SIZE + Vector2(BACKGROUND_PADDING, BACKGROUND_PADDING)
+# func _draw_grid() -> void:
+#	var grid_color: Color = Color(0.12, 0.19, 0.25, 0.28)
+#	var start: Vector2 = Vector2(-BACKGROUND_PADDING, -BACKGROUND_PADDING)
+#	var end: Vector2 = VIEW_SIZE + Vector2(BACKGROUND_PADDING, BACKGROUND_PADDING)
 
-	for x in range(int(start.x), int(end.x) + 1, 40):
-		draw_line(Vector2(x, start.y), Vector2(x, end.y), grid_color, 1.0)
-	for y in range(int(start.y), int(end.y) + 1, 40):
-		draw_line(Vector2(start.x, y), Vector2(end.x, y), grid_color, 1.0)
+#	for x in range(int(start.x), int(end.x) + 1, 40):
+#		draw_line(Vector2(x, start.y), Vector2(x, end.y), grid_color, 1.0)
+#	for y in range(int(start.y), int(end.y) + 1, 40):
+#		draw_line(Vector2(start.x, y), Vector2(end.x, y), grid_color, 1.0)
 
 # rendering: handled by clients
 func _draw_laser() -> void:
@@ -613,12 +671,12 @@ func _is_target_completed_for_display(target: Area2D) -> bool:
 	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
 	return fill != null and fill.color == TARGET_DONE_FILL
 
-func _update_cockpit_frame() -> void:
-	var my_id: int = multiplayer.get_unique_id()
-	if my_id == GameManager.player2 and my_id != GameManager.player1:
-		_cockpit_frame.texture = PLAYER_2_COCKPIT_TEXTURE
-	else:
-		_cockpit_frame.texture = PLAYER_1_COCKPIT_TEXTURE
+#func _update_cockpit_frame() -> void:
+#	var my_id: int = multiplayer.get_unique_id()
+#	if my_id == GameManager.player2 and my_id != GameManager.player1:
+#		_cockpit_frame.texture = PLAYER_2_COCKPIT_TEXTURE
+#	else:
+#		_cockpit_frame.texture = PLAYER_1_COCKPIT_TEXTURE
 
 # rendering: handled by clients
 func _draw_cursor_box() -> void:
@@ -744,46 +802,54 @@ func request_laser_state(pressed: bool) -> void:
 		if GameManager._active_laser_peers[peer_id] == true:
 			any_button_down = true
 			break
-		_laser_state = any_button_down
+
+	_laser_state = any_button_down
 	_sync_laser_state.rpc(any_button_down)
 	
 	if _laser_active != any_button_down:
 		_laser_active = any_button_down
-
 		sync_laser_active.rpc(any_button_down)
 
 
-@rpc("any_peer", "call_local", "unreliable")
+@rpc("any_peer", "call_local", "reliable")
 func _sync_laser_state(active: bool) -> void:
 	_laser_state = active
 
-func _on_laser_active_true() -> void:
-	_play_laser_animation("laser_start")
 
-func _on_laser_active_hold() -> void:
-	_ensure_laser_animation()
-	if laser_animation == null:
+func _on_laser_active_true(laser_animation: AnimatedSprite2D) -> void:
+	if laser_animation == null or not is_instance_valid(laser_animation):
 		return
-	if laser_animation.is_playing() and laser_animation.animation == "laser_start":
+	laser_animation.visible = true
+	laser_animation.stop()
+	laser_animation.frame = 0
+	laser_animation.play("laser_start")
+
+func _on_laser_active_hold(laser_animation: AnimatedSprite2D) -> void:
+	if laser_animation == null or not is_instance_valid(laser_animation):
 		return
-	if laser_animation.animation != "laser_hold":
-		_play_laser_animation("laser_hold")
-
-func _on_laser_active_false() -> void:
-	_play_laser_animation("laser_end")
-
-
-func _on_laser_inactive() -> void:
-	_ensure_laser_animation()
-	if laser_animation == null:
+	if laser_animation.animation == "laser_start" and laser_animation.is_playing():
 		return
-	if laser_animation.animation == "laser_end" and not laser_animation.is_playing():
-		laser_animation.visible = false
+	laser_animation.visible = true
+	if laser_animation.animation != "laser_held":
 		laser_animation.stop()
-	elif laser_animation.animation == "laser_hold" or laser_animation.animation == "laser_start":
-		if not laser_animation.is_playing():
-			laser_animation.visible = false
-			laser_animation.stop()
+		laser_animation.frame = 0
+		laser_animation.play("laser_held")
+
+
+func _on_laser_active_false(laser_animation: AnimatedSprite2D) -> void:
+	if laser_animation == null or not is_instance_valid(laser_animation):
+		return
+	laser_animation.visible = true
+	laser_animation.stop()
+	laser_animation.frame = 0
+	laser_animation.play("laser_end")
+
+
+func _on_laser_inactive(laser_animation: AnimatedSprite2D) -> void:
+	if laser_animation == null or not is_instance_valid(laser_animation):
+		return
+	if not laser_animation.is_playing():
+		laser_animation.visible = false
 
 @rpc("authority", "call_local", "unreliable")
 func sync_laser_active(active: bool) -> void:

@@ -38,9 +38,9 @@ animations = [{
 script = ExtResource("1_shared")
 
 [node name="Background" type="Sprite2D" parent="." unique_id=1836493077]
-z_index = -1
-position = Vector2(1017, 67.996)
-scale = Vector2(1.916, 1.916)
+z_index = -2
+position = Vector2(1060.0001, 32)
+scale = Vector2(2.455024, 2.2673519)
 texture = ExtResource("2_hju85")
 
 [node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]
@@ -50,6 +50,7 @@ texture = ExtResource("2_hju85")
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1273282158]
 
 [node name="CockpitFrame" type="TextureRect" parent="HUD" unique_id=345461023]
+visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
