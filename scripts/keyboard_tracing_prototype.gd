@@ -238,7 +238,7 @@ func _miss_asteroid() -> void:
 
 	missed_asteroids += 1
 	score = maxi(0, score - 1)
-	energy = maxf(0.0, energy - ASTEROID_MISS_ENERGY_PENALTY)
+	energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
 	_round_flash = 1.0
 
 	_new_asteroid_round()
@@ -603,20 +603,27 @@ func _move_cursor(delta: float) -> void:
 
 	if not updated_roles and clientLabel != null:
 		if GameManager.player1 != 0 and GameManager.player2 != 0: # if I don't do this, then there is a race condition where player1/player2 aren't initialized
-			if my_id == GameManager.player1:
-				clientLabel.text = "Player 1: horizontal controls"
-			elif my_id == GameManager.player2:
-				clientLabel.text = "Player 2: vertical controls"
+			if GameManager.player1 != GameManager.player2:
+				if my_id == GameManager.player1:
+					clientLabel.text = "Player 1: horizontal controls"
+				elif my_id == GameManager.player2:
+					clientLabel.text = "Player 2: vertical controls"
+				else:
+					clientLabel.text = "Controls not assigned"
 			else:
-				clientLabel.text = "Controls not assigned"
+				if my_id == GameManager.player1:
+					clientLabel.text = "Player 1: horizontal and vertical controls"
+				else:
+					clientLabel.text = "Controls not assigned"
 			updated_roles = true
 
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
-			game_state = GameState.Ended
-			set_process(false) # 👈 STOP PROCESS IMMEDIATELY to prevent loop spam!
-			# this should trigger game ending
-			game_end()
+			_miss_asteroid()
+			# game_state = GameState.Ended
+			# set_process(false) # 👈 STOP PROCESS IMMEDIATELY to prevent loop spam!
+			# # this should trigger game ending
+			# game_end()
 		return
 
 	
