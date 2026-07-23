@@ -7,6 +7,16 @@ const MENU_SCENE_PATH = "res://scenes/control.tscn"
 const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
+const ASTEROID_TEXTURES = [
+	preload("res://assets/asteroid_brown_1.png"),
+	preload("res://assets/asteroid_brown_2.png"),
+	preload("res://assets/asteroid_brown_3.png"),
+	preload("res://assets/asteroid_brown_4.png"),
+	preload("res://assets/asteroid_blue_1.png"),
+	preload("res://assets/asteroid_blue_2.png"),
+	preload("res://assets/asteroid_blue_3.png"),
+	preload("res://assets/asteroid_blue_4.png"),
+]
 
 const VIEW_SIZE = Vector2(2400, 1350)
 const BACKGROUND_PADDING = 1600.0
@@ -15,7 +25,7 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
-const ENERGY_DRAIN_PER_SECOND = 10.0
+const ENERGY_DRAIN_PER_SECOND = 15.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 
@@ -25,9 +35,13 @@ const TARGET_COUNT = 5
 const TARGET_SPAWN_MARGIN = 55.0
 const TARGET_SPAWN_TOP = 130.0
 const TARGET_MINIMUM_SPACING = 100.0
-const TARGET_SPAWN_ATTEMPTS = 50
+const TARGET_PLACEMENT_RADIUS = 32.0
+const TARGET_ALPHA_THRESHOLD = 0.8
+const TARGET_ALPHA_SAMPLE_COUNT = 16
 const OFFSCREEN_BUBBLE_EDGE_MARGIN = 56.0
 const OFFSCREEN_BUBBLE_RADIUS = 17.0
+const ASTEROID_WIDTH_MIN = 960.0
+const ASTEROID_WIDTH_MAX = 1100.0
 # target colors
 const TARGET_RED_FILL = Color(1.0, 0.18, 0.22, 0.9)
 const TARGET_RED_GLOW = Color(1.0, 0.18, 0.22, 0.18)
@@ -50,12 +64,19 @@ var _cursor: Node2D
 @export var completed_targets: int = 0
 @export var asteroid_time_remaining: float = ASTEROID_TIME_LIMIT
 @export var missed_asteroids: int = 0
+@export var asteroid_variant: int = 0
+@export var asteroid_position: Vector2 = VIEW_SIZE * 0.5
+@export var asteroid_width: float = ASTEROID_WIDTH_MIN
 var _laser_active: bool = false
 var _round_flash: float = 0.0
 var _targets: Array[Area2D] = []
 var _current_line: Line2D = null
 var _last_laser_collision_position: Vector2 = Vector2.ZERO
 var _has_last_laser_collision_position: bool = false
+var _asteroid_visual_initialized: bool = false
+var _last_asteroid_variant: int = -1
+var _last_asteroid_position: Vector2 = Vector2.ZERO
+var _last_asteroid_width: float = 0.0
 
 var updated_roles = false # this is to check if controls have been properly assigned
 
@@ -64,6 +85,8 @@ var game_state: GameState = GameState.Playing
 #region onready_vars
 @onready var _targets_root: Node2D = $Targets
 @onready var _lines: Node2D = $LaserLines
+@onready var _asteroid: Sprite2D = $Asteroid
+@onready var _aim_overlay: Node2D = $AimOverlay
 # @onready var _camera: Camera2D = $Camera2D
 @onready var _score_label: Label = $HUD/ScoreLabel
 @onready var _target_label: Label = $HUD/TargetLabel
@@ -72,6 +95,7 @@ var game_state: GameState = GameState.Playing
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
+@onready var _pause_menu: PauseMenu = $PauseMenu
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -79,6 +103,12 @@ var game_state: GameState = GameState.Playing
 
 
 func _ready() -> void:
+	if not _aim_overlay.draw.is_connected(_draw_aim_overlay):
+		_aim_overlay.draw.connect(_draw_aim_overlay)
+	if not _pause_menu.resume_requested.is_connected(_on_pause_resume_requested):
+		_pause_menu.resume_requested.connect(_on_pause_resume_requested)
+	_pause_menu.set_pause_visible(false)
+	_apply_asteroid_visual(true)
 	_update_hud()
 	_update_cockpit_frame()
 	cursor_spawner.spawned.connect(connect_cursor)
@@ -89,7 +119,7 @@ func _ready() -> void:
 
 	# 1. Connect target spawner to register nodes on clients when instantiated by server
 	targets_spawner.spawned.connect(_on_target_spawned)
-	
+
 	# handling things only the server should...
 	if multiplayer.is_server():
 		instantiate_targets()
@@ -148,6 +178,8 @@ func _process(delta: float) -> void:
 	if not multiplayer.has_multiplayer_peer():
 		return
 
+	_apply_asteroid_visual()
+
 	if not is_instance_valid(_cursor):
 		return
 
@@ -182,12 +214,53 @@ func _process(delta: float) -> void:
 		# rendering: handled by clients
 		_update_hud()
 		queue_redraw()
+		_aim_overlay.queue_redraw()
 	elif game_state == GameState.Paused:
 		# Handle paused state logic
 		pass
 	elif game_state == GameState.Ended:
 		game_end()
 		pass
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if game_state == GameState.Ended:
+		return
+	if event is InputEventKey and event.echo:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		_request_pause_toggle.rpc_id(1)
+		get_viewport().set_input_as_handled()
+
+
+func _on_pause_resume_requested() -> void:
+	_request_pause_toggle.rpc_id(1)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _request_pause_toggle() -> void:
+	if not multiplayer.is_server():
+		return
+
+	_set_pause_state.rpc(game_state != GameState.Paused)
+
+
+@rpc("authority", "call_local", "reliable")
+func _set_pause_state(paused: bool) -> void:
+	if game_state == GameState.Ended:
+		return
+
+	game_state = GameState.Paused if paused else GameState.Playing
+	_pause_menu.set_pause_visible(paused)
+
+	if paused:
+		_laser_active = false
+		_clear_laser_line()
+		_reset_laser_collision()
+		GameManager._active_laser_peers.clear()
+
+	queue_redraw()
+	_aim_overlay.queue_redraw()
 
 
 #region gamelogic
@@ -206,6 +279,7 @@ func _reset_targets() -> void:
 	if not multiplayer.is_server():
 		return
 
+	_randomize_asteroid()
 	_randomize_target_positions()
 	completed_targets = 0
 	asteroid_time_remaining = ASTEROID_TIME_LIMIT
@@ -230,7 +304,7 @@ func _complete_asteroid() -> void:
 	_round_flash = 1.0
 
 	_new_asteroid_round()
-	
+
 
 func _miss_asteroid() -> void:
 	if not multiplayer.is_server():
@@ -244,25 +318,150 @@ func _miss_asteroid() -> void:
 	_new_asteroid_round()
 
 # server only
+func _randomize_asteroid() -> void:
+	if not multiplayer.is_server():
+		return
+
+	var next_variant: int = randi_range(0, ASTEROID_TEXTURES.size() - 1)
+	if ASTEROID_TEXTURES.size() > 1 and next_variant == asteroid_variant:
+		next_variant = (next_variant + randi_range(1, ASTEROID_TEXTURES.size() - 1)) % ASTEROID_TEXTURES.size()
+
+	asteroid_variant = next_variant
+	asteroid_width = randf_range(ASTEROID_WIDTH_MIN, ASTEROID_WIDTH_MAX)
+
+	var texture: Texture2D = ASTEROID_TEXTURES[asteroid_variant]
+	var texture_size: Vector2 = texture.get_size()
+	var scale_factor: float = asteroid_width / texture_size.x
+	var display_size: Vector2 = texture_size * scale_factor
+	var minimum_position: Vector2 = Vector2(
+		display_size.x * 0.5 + TARGET_SPAWN_MARGIN,
+		display_size.y * 0.5 + TARGET_SPAWN_TOP
+	)
+	var maximum_position: Vector2 = Vector2(
+		VIEW_SIZE.x - display_size.x * 0.5 - TARGET_SPAWN_MARGIN,
+		VIEW_SIZE.y - display_size.y * 0.5 - TARGET_SPAWN_MARGIN
+	)
+
+	asteroid_position = Vector2(
+		randf_range(minimum_position.x, maximum_position.x),
+		randf_range(minimum_position.y, maximum_position.y)
+	)
+	_apply_asteroid_visual(true)
+
+
+func _apply_asteroid_visual(force: bool = false) -> void:
+	if _asteroid == null:
+		return
+
+	if (
+		not force
+		and _asteroid_visual_initialized
+		and asteroid_variant == _last_asteroid_variant
+		and asteroid_position.is_equal_approx(_last_asteroid_position)
+		and is_equal_approx(asteroid_width, _last_asteroid_width)
+	):
+		return
+
+	var safe_variant: int = clampi(asteroid_variant, 0, ASTEROID_TEXTURES.size() - 1)
+	var texture: Texture2D = ASTEROID_TEXTURES[safe_variant]
+	var scale_factor: float = asteroid_width / maxf(texture.get_size().x, 1.0)
+
+	_asteroid.texture = texture
+	_asteroid.position = asteroid_position
+	_asteroid.scale = Vector2.ONE * scale_factor
+	_asteroid.visible = true
+
+	_asteroid_visual_initialized = true
+	_last_asteroid_variant = asteroid_variant
+	_last_asteroid_position = asteroid_position
+	_last_asteroid_width = asteroid_width
+
+
+# server only
 func _randomize_target_positions() -> void:
 	if not multiplayer.is_server():
 		return
+
+	var candidates: Array[Vector2] = _build_asteroid_target_candidates()
 	var placed_positions: Array[Vector2] = []
 
+	if candidates.size() < TARGET_COUNT:
+		push_error("The selected asteroid does not have enough safe target positions.")
+		return
+
 	for target in _targets:
-		var new_position: Vector2 = target.position
+		var selected_position: Vector2 = Vector2.ZERO
+		var found_position: bool = false
 
-		for attempt in range(TARGET_SPAWN_ATTEMPTS):
-			new_position = Vector2(
-				randf_range(TARGET_SPAWN_MARGIN, VIEW_SIZE.x - TARGET_SPAWN_MARGIN),
-				randf_range(TARGET_SPAWN_TOP, VIEW_SIZE.y - TARGET_SPAWN_MARGIN)
-			)
-
-			if _is_position_clear(new_position, placed_positions):
+		for candidate in candidates:
+			if _is_position_clear(candidate, placed_positions):
+				selected_position = candidate
+				found_position = true
 				break
 
-		target.position = new_position
-		placed_positions.append(new_position)
+		# The HUD check is optional, but spacing and asteroid containment are not.
+		if not found_position:
+			for candidate in candidates:
+				if _is_position_spaced(candidate, placed_positions):
+					selected_position = candidate
+					found_position = true
+					break
+
+		if not found_position:
+			push_error("Could not place all targets on the selected asteroid.")
+			return
+
+		target.position = selected_position
+		placed_positions.append(selected_position)
+		candidates.erase(selected_position)
+
+
+func _build_asteroid_target_candidates() -> Array[Vector2]:
+	var candidates: Array[Vector2] = []
+	var image: Image = _asteroid.texture.get_image()
+	if image == null or image.is_empty():
+		return candidates
+
+	var asteroid_scale: float = maxf(absf(_asteroid.scale.x), 0.001)
+	var radius_in_pixels: float = TARGET_PLACEMENT_RADIUS / asteroid_scale
+	var scan_step: int = maxi(8, floori(radius_in_pixels * 0.7))
+	var scan_margin: int = ceili(radius_in_pixels)
+	var image_size: Vector2 = Vector2(image.get_width(), image.get_height())
+
+	for y in range(scan_margin, image.get_height() - scan_margin, scan_step):
+		for x in range(scan_margin, image.get_width() - scan_margin, scan_step):
+			var pixel_position: Vector2 = Vector2(x, y)
+			if not _is_opaque_target_area(image, pixel_position, radius_in_pixels):
+				continue
+
+			var asteroid_local_position: Vector2 = pixel_position - image_size * 0.5
+			candidates.append(_asteroid.to_global(asteroid_local_position))
+
+	candidates.shuffle()
+	return candidates
+
+
+func _is_opaque_target_area(image: Image, center: Vector2, radius: float) -> bool:
+	if not _is_opaque_asteroid_pixel(image, center):
+		return false
+
+	for radius_ratio in [0.45, 0.75, 1.0]:
+		for sample_index in range(TARGET_ALPHA_SAMPLE_COUNT):
+			var angle: float = TAU * float(sample_index) / float(TARGET_ALPHA_SAMPLE_COUNT)
+			var sample_position: Vector2 = center + Vector2.from_angle(angle) * radius * radius_ratio
+			if not _is_opaque_asteroid_pixel(image, sample_position):
+				return false
+
+	return true
+
+
+func _is_opaque_asteroid_pixel(image: Image, pixel_position: Vector2) -> bool:
+	var pixel_x: int = roundi(pixel_position.x)
+	var pixel_y: int = roundi(pixel_position.y)
+	if pixel_x < 0 or pixel_y < 0 or pixel_x >= image.get_width() or pixel_y >= image.get_height():
+		return false
+
+	return image.get_pixel(pixel_x, pixel_y).a >= TARGET_ALPHA_THRESHOLD
 
 # server only
 func _is_position_clear(candidate: Vector2, placed_positions: Array[Vector2]) -> bool:
@@ -271,6 +470,10 @@ func _is_position_clear(candidate: Vector2, placed_positions: Array[Vector2]) ->
 	if _energy_display.get_global_rect().grow(TARGET_SPAWN_MARGIN).has_point(candidate_screen_position):
 		return false
 
+	return _is_position_spaced(candidate, placed_positions)
+
+
+func _is_position_spaced(candidate: Vector2, placed_positions: Array[Vector2]) -> bool:
 	for placed_position in placed_positions:
 		if candidate.distance_to(placed_position) < TARGET_MINIMUM_SPACING:
 			return false
@@ -447,7 +650,7 @@ func player_disconnected(id):
 	GameManager.Players.erase(id)
 	GameManager.player_ids.erase(id)
 	print("Player disconnected: %d" % id)
-	
+
 	#TODO: restart server game state if all players disconnected
 
 	if GameManager.Players.size() == 0:
@@ -465,7 +668,7 @@ func player_disconnected(id):
 #region rendering
 # rendering: handled by clients
 func _draw() -> void:
-	if game_state != GameState.Playing:
+	if game_state == GameState.Ended:
 		return
 	if _cursor == null:
 		return
@@ -474,6 +677,14 @@ func _draw() -> void:
 	var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
 	draw_rect(visible_rect, Color.BLACK, true)
 	draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
+
+
+func _draw_aim_overlay() -> void:
+	if game_state != GameState.Playing:
+		return
+	if not is_instance_valid(_cursor):
+		return
+
 	_draw_laser()
 	_draw_offscreen_target_bubbles()
 	_draw_cursor_box()
@@ -514,13 +725,13 @@ func _draw_laser() -> void:
 	if not _laser_active:
 		return
 
-	draw_circle(_cursor.position, LASER_RADIUS, Color(0.26, 0.86, 1.0, 0.16))
-	draw_arc(_cursor.position, LASER_RADIUS, 0.0, TAU, 48, Color(0.26, 0.86, 1.0, 0.85), 3.0)
-	draw_line(Vector2(_cursor.position.x - LASER_RADIUS, _cursor.position.y), Vector2(_cursor.position.x + LASER_RADIUS, _cursor.position.y), Color(0.86, 0.96, 1.0, 0.65), 2.0)
-	draw_line(Vector2(_cursor.position.x, _cursor.position.y - LASER_RADIUS), Vector2(_cursor.position.x, _cursor.position.y + LASER_RADIUS), Color(0.86, 0.96, 1.0, 0.65), 2.0)
+	_aim_overlay.draw_circle(_cursor.position, LASER_RADIUS, Color(0.26, 0.86, 1.0, 0.16))
+	_aim_overlay.draw_arc(_cursor.position, LASER_RADIUS, 0.0, TAU, 48, Color(0.26, 0.86, 1.0, 0.85), 3.0)
+	_aim_overlay.draw_line(Vector2(_cursor.position.x - LASER_RADIUS, _cursor.position.y), Vector2(_cursor.position.x + LASER_RADIUS, _cursor.position.y), Color(0.86, 0.96, 1.0, 0.65), 2.0)
+	_aim_overlay.draw_line(Vector2(_cursor.position.x, _cursor.position.y - LASER_RADIUS), Vector2(_cursor.position.x, _cursor.position.y + LASER_RADIUS), Color(0.86, 0.96, 1.0, 0.65), 2.0)
 
 	if _round_flash > 0.0:
-		draw_arc(_cursor.position, 95.0 + 20.0 * _round_flash, 0.0, TAU, 64, Color(0.24, 1.0, 0.66, _round_flash), 5.0)
+		_aim_overlay.draw_arc(_cursor.position, 95.0 + 20.0 * _round_flash, 0.0, TAU, 64, Color(0.24, 1.0, 0.66, _round_flash), 5.0)
 
 # rendering: handled by clients
 func _draw_offscreen_target_bubbles() -> void:
@@ -543,10 +754,10 @@ func _draw_offscreen_target_bubbles() -> void:
 		)
 		var target_direction: Vector2 = (target_position - bubble_position).normalized()
 
-		draw_circle(bubble_position, OFFSCREEN_BUBBLE_RADIUS + 8.0, TARGET_RED_GLOW)
-		draw_circle(bubble_position, OFFSCREEN_BUBBLE_RADIUS, Color(1.0, 0.18, 0.22, 0.34))
-		draw_arc(bubble_position, OFFSCREEN_BUBBLE_RADIUS, 0.0, TAU, 32, TARGET_RED_RING, 2.5)
-		draw_line(
+		_aim_overlay.draw_circle(bubble_position, OFFSCREEN_BUBBLE_RADIUS + 8.0, TARGET_RED_GLOW)
+		_aim_overlay.draw_circle(bubble_position, OFFSCREEN_BUBBLE_RADIUS, Color(1.0, 0.18, 0.22, 0.34))
+		_aim_overlay.draw_arc(bubble_position, OFFSCREEN_BUBBLE_RADIUS, 0.0, TAU, 32, TARGET_RED_RING, 2.5)
+		_aim_overlay.draw_line(
 			bubble_position,
 			bubble_position + target_direction * (OFFSCREEN_BUBBLE_RADIUS - 5.0),
 			Color(1.0, 0.84, 0.78, 0.9),
@@ -574,8 +785,8 @@ func _draw_cursor_box() -> void:
 	var fill_color: Color = Color(0.24, 1.0, 0.74, 0.14)
 	var line_color: Color = Color(0.24, 1.0, 0.74, 1.0)
 
-	draw_rect(box, fill_color, true)
-	draw_rect(box, line_color, false, 2.0)
+	_aim_overlay.draw_rect(box, fill_color, true)
+	_aim_overlay.draw_rect(box, line_color, false, 2.0)
 
 func _on_target_spawned(node: Node) -> void:
 	var target = node as Area2D
@@ -645,7 +856,7 @@ func assign_controls() -> void:
 			GameManager.sync_controls.rpc(GameManager.player_ids[0], GameManager.player_ids[0])
 			print("There is exactly one player, who will control both horizontal and vertical axes.")
 			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
-			
+
 			pass
 		2:
 			# First connected player controls horizontal movement.
