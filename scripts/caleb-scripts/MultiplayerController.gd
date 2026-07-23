@@ -26,6 +26,7 @@ enum TestingType {
 
 #region onReady
 @onready var menuCanvas = $MenuCanvas
+@onready var creditsCanvas = $CreditsCanvas
 @onready var label = $MenuCanvas/Label
 
 @onready var hostButton = $MenuCanvas/HostButton
@@ -90,8 +91,12 @@ func _fit_menu_to_window() -> void:
 	)
 	menuCanvas.scale = Vector2.ONE * menu_scale
 	menuCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
+	creditsCanvas.scale = Vector2.ONE * menu_scale
+	creditsCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
 
 func init_menu():
+	menuCanvas.visible = true
+	creditsCanvas.visible = false
 	cancelButton.disabled = true
 	startGameButton.disabled = true
 	hostButton.disabled = false
@@ -110,6 +115,22 @@ func init_menu():
 
 	if not multiplayer.server_disconnected.is_connected(_on_server_disconnected):
 		multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+
+func _on_credits_button_pressed() -> void:
+	menuCanvas.visible = false
+	creditsCanvas.visible = true
+
+
+func _on_credits_back_button_pressed() -> void:
+	creditsCanvas.visible = false
+	menuCanvas.visible = true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if creditsCanvas.visible and event.is_action_pressed("ui_cancel"):
+		_on_credits_back_button_pressed()
+		get_viewport().set_input_as_handled()
 
 
 func _on_cancel_button_button_down() -> void:
