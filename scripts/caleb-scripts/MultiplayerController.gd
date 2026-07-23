@@ -16,26 +16,22 @@ enum TestingType {
 @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
 @export var port = 443 # Standard secure web proxy port used by Railway
 
-# @export var Address = "orbital-defense-production.up.railway.app" # Put your Railway domain here!
-# @export var port = 443 # Standard secure web proxy port used by Railway
 
-# LOCAL TESTING ONLY
-# @export var Address = "127.0.0.1" # local server (?)
-# @export var port = 8910 # TODO: check port?
 #endregion
 
 #region onReady
-@onready var label = $Label
+@onready var menuCanvas = $MenuCanvas
+@onready var label = $MenuCanvas/Label
 
-@onready var hostButton = $HostButton
-@onready var joinButton = $JoinButton
-@onready var cancelButton = $CancelButton
-@onready var startGameButton = $StartGameButton
+@onready var hostButton = $MenuCanvas/HostButton
+@onready var joinButton = $MenuCanvas/JoinButton
+@onready var cancelButton = $MenuCanvas/CancelButton
+@onready var startGameButton = $MenuCanvas/StartGameButton
 
-@onready var roomCodeText = $RoomCode
-@onready var usernameText = $Username
+@onready var roomCodeText = $MenuCanvas/RoomCode
+@onready var usernameText = $MenuCanvas/Username
 
-@onready var notificationLabel = $NotificationLabel
+@onready var notificationLabel = $MenuCanvas/NotificationLabel
 #endregion
 
 # Idle: neither joining nor hosting
@@ -48,6 +44,7 @@ enum TestingType {
 
 
 const MAX_PLAYERS = 2
+const MENU_DESIGN_SIZE = Vector2(1920.0, 1080.0)
 
 var peer
 
@@ -60,6 +57,10 @@ enum LobbyState {
 var state = LobbyState.IDLE
 
 func _ready():
+	if not resized.is_connected(_fit_menu_to_window):
+		resized.connect(_fit_menu_to_window)
+	_fit_menu_to_window()
+	call_deferred("_fit_menu_to_window")
 	init_menu()
 	match testingType:
 		TestingType.Railway:
@@ -72,6 +73,18 @@ func _ready():
 	if "--server" in OS.get_cmdline_args():
 		hostGame()
 	pass
+
+
+func _fit_menu_to_window() -> void:
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+
+	var menu_scale = max(
+		size.x / MENU_DESIGN_SIZE.x,
+		size.y / MENU_DESIGN_SIZE.y
+	)
+	menuCanvas.scale = Vector2.ONE * menu_scale
+	menuCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
 
 func init_menu():
 	cancelButton.disabled = true
@@ -102,9 +115,6 @@ func _on_cancel_button_button_down() -> void:
 	hostButton.disabled = false
 	joinButton.disabled = false
 
-	# TODO: destroy peer and/or disconnect from server
-	# if peer:
-	# 	peer = null
 
 	close_server()
 
@@ -112,16 +122,12 @@ func _on_cancel_button_button_down() -> void:
 
 
 func _on_join_button_button_down() -> void:
+	# TODO: check if server is "busy" or full
 	if usernameText.text == "":
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
 		return
-	# check room code text
-	# if roomCodeText.text == "":
-	# 	print("Please enter a room code!")
-	# 	label.text = "Please enter a room code!"
-	# 	return
-	# TODO: check if room code is valid
+
 	hostButton.disabled = true
 	joinButton.disabled = true
 	
@@ -130,10 +136,6 @@ func _on_join_button_button_down() -> void:
 	state = LobbyState.JOINING
 	startGameButton.disabled = false
 
-	#TODO: connect to server
-
-
-	# code by Gemini:
 
 	match testingType:
 		TestingType.Railway:
@@ -156,7 +158,6 @@ func _on_join_button_button_down() -> void:
 				print("Cannot connect to server!", error)
 				return
 			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
-			
 	
 	# var connection_url = Address
 	
@@ -179,11 +180,10 @@ func _on_host_button_button_down() -> void:
 
 	hostButton.disabled = true
 	joinButton.disabled = true
+
 	# TODO: create server
 	hostGame()
-	
 	SendPlayerData(usernameText.text, multiplayer.get_unique_id())
-	
 
 	pass # Replace with function body.
 
@@ -231,9 +231,9 @@ func hostGame():
 			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
 	
-	# # peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
-	# if testingType == TestingType.Local:
-	# 	peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	# peer.get_host().compress(ENetConnection.COMPRESS_FASTLZ)
+	if testingType == TestingType.Local:
+		peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
 	
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
@@ -247,6 +247,7 @@ func request_server_to_start():
 	if multiplayer.is_server():
 		print("Server received start request. Broadcasting to all clients...")
 		# The server calls .rpc(), which successfully broadcasts to ALL clients
+		GameManager.game_in_progress = true
 		startGame.rpc()
 
 @rpc("any_peer", "call_local")
@@ -265,6 +266,21 @@ func startGame():
 
 @rpc("any_peer")
 func SendPlayerData(playerName, id):
+	# check if game is in progress
+	if multiplayer.is_server():
+		var sender_id = multiplayer.get_unique_id()
+		if sender_id == 0:
+			sender_id = id
+
+		if GameManager.game_in_progress:
+			print("Game already in progress. Rejecting new player: ", playerName)
+			reject_connection.rpc_id(id, "Game already in progress. Please try again later.")
+			get_tree().create_timer(0.2).timeout.connect(func():
+				if multiplayer.get_peers().has(sender_id):
+					multiplayer.disconnect_peer(sender_id)
+			)
+			return
+
 	if !GameManager.Players.has(id):
 		GameManager.Players[id] = {
 			"name": playerName,
@@ -286,21 +302,20 @@ func player_connected(id):
 
 func player_disconnected(id):
 	GameManager.Players.erase(id)
-
-	# TODO: test if this is redundant code
 	var players = get_tree().get_nodes_in_group("Players")
 	for i in players:
 		if i.name == str(id):
 			i.queue_free()
+	GameManager.player_ids.erase(id)
+	print("Player disconnected: %d" % id)
+
+	#TODO: restart server game state if all players disconnected
 	pass
 
 func connected_to_server():
 	# note: since this passes 1, does that mean its server authority?
-	SendPlayerData.rpc_id(1, $Username.text, multiplayer.get_unique_id())
+	SendPlayerData.rpc_id(1, usernameText.text, multiplayer.get_unique_id())
 
-	# TODO: validate roomcode.text
-	# print("Connected to server with room code", roomCodeText.text)
-	# label.text = "Connected to server with room code " + roomCodeText.text
 	pass
 
 func connection_failed():
@@ -317,7 +332,6 @@ func close_server():
 		multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 		print("Server closed.")
-
 	else:
 		print("No multiplayer peer to close.")
 
@@ -338,5 +352,13 @@ func _on_server_disconnected() -> void:
 	self.process_mode = Node.PROCESS_MODE_INHERIT
 	init_menu()
 
+@rpc("any_peer", "call_remote", "reliable")
+func reject_connection(reason: String) -> void:
+	print("Connection rejected by server: %s" % reason)
+	label.text = "Connection rejected by server: %s" % reason
 
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+	init_menu()
 #endregion
