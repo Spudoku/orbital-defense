@@ -87,6 +87,9 @@ func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(player_disconnected):
 		multiplayer.peer_disconnected.connect(player_disconnected)
 
+	# 1. Connect target spawner to register nodes on clients when instantiated by server
+	targets_spawner.spawned.connect(_on_target_spawned)
+	
 	# handling things only the server should...
 	if multiplayer.is_server():
 		instantiate_targets()
@@ -573,6 +576,11 @@ func _draw_cursor_box() -> void:
 
 	draw_rect(box, fill_color, true)
 	draw_rect(box, line_color, false, 2.0)
+
+func _on_target_spawned(node: Node) -> void:
+	var target = node as Area2D
+	if target and not _targets.has(target):
+		_targets.append(target)
 #endregion
 
 #region input
