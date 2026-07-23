@@ -19,6 +19,7 @@ const ENERGY_DRAIN_PER_SECOND = 10.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 
+
 # target-related constants
 const TARGET_COUNT = 5
 const TARGET_SPAWN_MARGIN = 55.0
@@ -82,14 +83,16 @@ func _ready() -> void:
 	_update_cockpit_frame()
 	cursor_spawner.spawned.connect(connect_cursor)
 
+
+	if not multiplayer.peer_disconnected.is_connected(player_disconnected):
+		multiplayer.peer_disconnected.connect(player_disconnected)
+
 	# handling things only the server should...
 	if multiplayer.is_server():
-		# assign_controls()
-		# _camera.position = _cursor_position
 		instantiate_targets()
 
 		instantiate_cursor()
-		_reset_targets()
+		_new_asteroid_round()
 		get_tree().create_timer(0.1).timeout.connect(assign_controls)
 		for player in GameManager.Players:
 			print("Player connected: %d" % player)
@@ -134,6 +137,10 @@ func instantiate_targets() -> void:
 
 
 # main game loop powering everything
+# process handles the following logic:
+# handle input
+# render the laser
+# if all asteroids are completed, start a new round
 func _process(delta: float) -> void:
 	if not multiplayer.has_multiplayer_peer():
 		return
@@ -181,6 +188,16 @@ func _process(delta: float) -> void:
 
 
 #region gamelogic
+func _new_asteroid_round() -> void:
+	_reset_targets()
+	_clear_laser_line()
+
+	if multiplayer.is_server():
+		# TODO: set a timer and wait for asteroid animation
+		# to end
+		return
+
+
 # target logic: handle as server
 func _reset_targets() -> void:
 	if not multiplayer.is_server():
@@ -208,9 +225,9 @@ func _complete_asteroid() -> void:
 	score += 1
 	energy = MAX_ENERGY
 	_round_flash = 1.0
-	_clear_laser_line()
-	_reset_targets()
 
+	_new_asteroid_round()
+	
 
 func _miss_asteroid() -> void:
 	if not multiplayer.is_server():
@@ -220,8 +237,8 @@ func _miss_asteroid() -> void:
 	score = maxi(0, score - 1)
 	energy = maxf(0.0, energy - ASTEROID_MISS_ENERGY_PENALTY)
 	_round_flash = 1.0
-	_clear_laser_line()
-	_reset_targets()
+
+	_new_asteroid_round()
 
 # server only
 func _randomize_target_positions() -> void:
@@ -423,6 +440,21 @@ func disconnect_all_players() -> void:
 	for player in multiplayer.get_peers():
 		multiplayer.disconnect_peer(player)
 
+func player_disconnected(id):
+	GameManager.Players.erase(id)
+	GameManager.player_ids.erase(id)
+	print("Player disconnected: %d" % id)
+	
+	#TODO: restart server game state if all players disconnected
+
+	if GameManager.Players.size() == 0:
+		print("All players disconnected, returning to menu...")
+		back_to_menu()
+	else:
+		print("Remaining players: %s" % str(GameManager.Players.keys()))
+		updated_roles = false
+		assign_controls() # reassign controls if a player disconnects
+	pass
 
 #endregion
 
@@ -598,6 +630,7 @@ func assign_controls() -> void:
 			GameManager.sync_controls.rpc(GameManager.player_ids[0], GameManager.player_ids[0])
 			print("There is exactly one player, who will control both horizontal and vertical axes.")
 			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
+			
 			pass
 		2:
 			# First connected player controls horizontal movement.
@@ -615,8 +648,6 @@ func assign_controls() -> void:
 	
 
 # move cursor based on input from client
-# TODO: fix this so that movement is always processed, but ONLY on the server;
-# currently it only handles the movement if the host calls this function
 @rpc("any_peer", "call_local", "unreliable")
 func _request_movement(movement: Vector2, delta: float) -> void:
 	if not multiplayer.is_server():

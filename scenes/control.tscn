@@ -1,18 +1,19 @@
-[gd_scene load_steps=15 format=3 uid="uid://dt88x8ynwkq76"]
+[gd_scene format=3 uid="uid://dt88x8ynwkq76"]
 
 [ext_resource type="Script" uid="uid://bcvegmotq3prb" path="res://scripts/caleb-scripts/MultiplayerController.gd" id="1_sjmnu"]
 [ext_resource type="PackedScene" uid="uid://pfo1m1ud0227" path="res://scenes/keyboard_tracing_prototype.tscn" id="2_r67kn"]
-[ext_resource type="Texture2D" path="res://assets/main_menu_background.png" id="3_menu"]
-[ext_resource type="Texture2D" path="res://assets/menu_username.png" id="4_username"]
-[ext_resource type="Texture2D" path="res://assets/menu_host.png" id="5_host"]
-[ext_resource type="Texture2D" path="res://assets/menu_host_pressed.png" id="6_host_pressed"]
-[ext_resource type="Texture2D" path="res://assets/menu_join.png" id="7_join"]
-[ext_resource type="Texture2D" path="res://assets/menu_join_pressed.png" id="8_join_pressed"]
-[ext_resource type="Texture2D" path="res://assets/menu_start.png" id="9_start"]
-[ext_resource type="Texture2D" path="res://assets/menu_start_pressed.png" id="10_start_pressed"]
-[ext_resource type="Texture2D" path="res://assets/menu_credits.png" id="11_credits"]
-[ext_resource type="Texture2D" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
-[ext_resource type="Texture2D" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
+[ext_resource type="Texture2D" uid="uid://cds6ohn0gk11o" path="res://assets/main_menu_background.png" id="3_menu"]
+[ext_resource type="Texture2D" uid="uid://8lccblaypk1m" path="res://assets/menu_username.png" id="4_username"]
+[ext_resource type="Texture2D" uid="uid://ctu3qe7wngrfk" path="res://assets/menu_host.png" id="5_host"]
+[ext_resource type="Texture2D" uid="uid://bsfhrchd1goo8" path="res://assets/menu_host_pressed.png" id="6_host_pressed"]
+[ext_resource type="Texture2D" uid="uid://ckeia40v885fe" path="res://assets/menu_join.png" id="7_join"]
+[ext_resource type="Texture2D" uid="uid://cu86bfo8m8vtp" path="res://assets/menu_join_pressed.png" id="8_join_pressed"]
+[ext_resource type="Texture2D" uid="uid://muxp4p2humca" path="res://assets/menu_start.png" id="9_start"]
+[ext_resource type="Texture2D" uid="uid://h40uhi6hvj2e" path="res://assets/menu_start_pressed.png" id="10_start_pressed"]
+[ext_resource type="Texture2D" uid="uid://ccc2vgvttoamt" path="res://assets/menu_credits.png" id="11_credits"]
+[ext_resource type="Texture2D" uid="uid://88li1w2dreu6" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
+[ext_resource type="Texture2D" uid="uid://dfln45e201chc" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
+[ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="14_vb5ih"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_clear"]
 bg_color = Color(1, 1, 1, 0)
@@ -25,14 +26,15 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_sjmnu")
+testingType = 1
 gameScene = ExtResource("2_r67kn")
 
-[node name="MenuCanvas" type="Control" parent="."]
-layout_mode = 0
+[node name="MenuCanvas" type="Control" parent="." unique_id=338817265]
+anchors_preset = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
 
-[node name="MenuBackground" type="TextureRect" parent="MenuCanvas"]
+[node name="MenuBackground" type="TextureRect" parent="MenuCanvas" unique_id=2088341881]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,7 +54,7 @@ offset_right = 1172.0
 offset_bottom = 336.0
 placeholder_text = "Room code"
 
-[node name="UsernameBackground" type="TextureRect" parent="MenuCanvas"]
+[node name="UsernameBackground" type="TextureRect" parent="MenuCanvas" unique_id=1093226424]
 layout_mode = 0
 offset_left = 748.0
 offset_top = 255.0
@@ -67,7 +69,6 @@ offset_left = 748.0
 offset_top = 255.0
 offset_right = 1172.0
 offset_bottom = 336.0
-mouse_default_cursor_shape = 1
 theme_override_colors/font_color = Color(1, 0.964706, 0.964706, 1)
 theme_override_colors/font_placeholder_color = Color(1, 0.964706, 0.964706, 0.75)
 theme_override_colors/caret_color = Color(1, 1, 1, 1)
@@ -141,7 +142,7 @@ texture_normal = ExtResource("9_start")
 texture_pressed = ExtResource("10_start_pressed")
 texture_hover = ExtResource("9_start")
 
-[node name="CreditsButton" type="TextureButton" parent="MenuCanvas"]
+[node name="CreditsButton" type="TextureButton" parent="MenuCanvas" unique_id=83049377]
 layout_mode = 0
 offset_left = 836.0
 offset_top = 755.0
@@ -161,7 +162,11 @@ offset_bottom = 985.0
 mouse_default_cursor_shape = 2
 texture_pressed = ExtResource("13_cancel_pressed")
 
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1248194271]
+stream = ExtResource("14_vb5ih")
+autoplay = true
+
 [connection signal="pressed" from="MenuCanvas/HostButton" to="." method="_on_host_button_button_down"]
 [connection signal="pressed" from="MenuCanvas/JoinButton" to="." method="_on_join_button_button_down"]
-[connection signal="pressed" from="MenuCanvas/CancelButton" to="." method="_on_cancel_button_button_down"]
 [connection signal="pressed" from="MenuCanvas/StartGameButton" to="." method="_on_start_game_button_button_down"]
+[connection signal="pressed" from="MenuCanvas/CancelButton" to="." method="_on_cancel_button_button_down"]

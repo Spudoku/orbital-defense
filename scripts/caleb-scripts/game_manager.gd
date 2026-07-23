@@ -7,6 +7,7 @@ var _active_laser_peers: Dictionary = {}
 var player1: int # this player controls horizontal movement
 var player2: int # this player controls vertical movement
 
+var game_in_progress: bool = false
 
 @rpc("any_peer", "call_local", "reliable")
 func sync_controls(p1: int, p2: int) -> void:
@@ -20,6 +21,7 @@ func sync_controls(p1: int, p2: int) -> void:
 func clear_game_state() -> void:
 	player1 = -1
 	player2 = -1
+	game_in_progress = false
 	Players.clear()
 	player_ids.clear()
 	_active_laser_peers.clear()
