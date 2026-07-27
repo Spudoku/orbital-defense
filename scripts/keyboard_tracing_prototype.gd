@@ -3,6 +3,7 @@ extends Node2D
 #region constants
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
+const GAME_OVER_PATH = "res://scenes/game_over.tscn"
 const MENU_SCENE_PATH = "res://scenes/control.tscn"
 const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
@@ -202,6 +203,10 @@ func _process(delta: float) -> void:
 
 		# camera position: handled by server
 		# _camera.position = _cursor_position
+
+		if missed_asteroids >= 3:
+			game_over()
+			game_end()
 
 		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
 		request_laser_state.rpc(local_laser_pressed)
@@ -666,6 +671,9 @@ func back_to_menu() -> void:
 		var new_menu = menu_scene.instantiate()
 		get_tree().root.add_child(new_menu)
 	pass
+
+func game_over() -> void:
+	get_tree().change_scene_to_file(GAME_OVER_PATH)
 
 func disconnect_all_players() -> void:
 	if not multiplayer.is_server():
