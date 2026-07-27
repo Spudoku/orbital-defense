@@ -1,5 +1,212 @@
 [gd_scene format=3 uid="uid://cel15onxxfeym"]
 
+[ext_resource type="Texture2D" uid="uid://bvtbdx6dicmam" path="res://assets/laser/laser_blue_center_strip.png" id="2_s0nli"]
+[ext_resource type="Texture2D" uid="uid://bx8pcug2pu1ul" path="res://assets/laser/laser_red_center_strip.png" id="3_ndevg"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1eco6"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(1024, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s0nli"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(1152, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ndevg"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(1280, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n5qf0"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(1408, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_pey64"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(768, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xjntw"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(896, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xl2q8"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(0, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_km28a"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(128, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_snjn8"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(256, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4m02u"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(384, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lk1ck"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(512, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fpr62"]
+atlas = ExtResource("2_s0nli")
+region = Rect2(640, 0, 128, 256)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_2hyr3"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1eco6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s0nli")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ndevg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n5qf0")
+}],
+"loop": false,
+"name": &"laser_end",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_pey64")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xjntw")
+}],
+"loop": true,
+"name": &"laser_held",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xl2q8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_km28a")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_snjn8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4m02u")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lk1ck")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fpr62")
+}],
+"loop": false,
+"name": &"laser_start",
+"speed": 5.0
+}]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2hyr3"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(1024, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i2fek"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(1152, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w4aas"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(1280, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1nr0v"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(1408, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jyh0g"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(768, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6d3dw"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(896, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l78ai"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(0, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_845pq"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(128, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dkhfs"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(256, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7f0ye"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(384, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_roy65"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(512, 0, 128, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4phgf"]
+atlas = ExtResource("3_ndevg")
+region = Rect2(640, 0, 128, 256)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_6ar1r"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2hyr3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i2fek")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w4aas")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1nr0v")
+}],
+"loop": false,
+"name": &"laser_end",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jyh0g")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6d3dw")
+}],
+"loop": true,
+"name": &"laser_held",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l78ai")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_845pq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dkhfs")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7f0ye")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_roy65")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4phgf")
+}],
+"loop": false,
+"name": &"laser_start",
+"speed": 5.0
+}]
+
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_d7ugn"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
@@ -8,6 +215,20 @@ properties/0/replication_mode = 1
 [node name="Cursor" type="Node2D" unique_id=288916131]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1500826929]
+
+[node name="Laser1" type="AnimatedSprite2D" parent="Camera2D" unique_id=232512018]
+visible = false
+position = Vector2(-2, 193)
+scale = Vector2(2.642, 1.977)
+sprite_frames = SubResource("SpriteFrames_2hyr3")
+animation = &"laser_start"
+
+[node name="Laser2" type="AnimatedSprite2D" parent="Camera2D" unique_id=1952418790]
+visible = false
+position = Vector2(-2, 193)
+scale = Vector2(2.642, 1.977)
+sprite_frames = SubResource("SpriteFrames_6ar1r")
+animation = &"laser_start"
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1359759773]
 replication_config = SubResource("SceneReplicationConfig_d7ugn")
