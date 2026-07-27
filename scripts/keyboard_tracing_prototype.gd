@@ -103,6 +103,7 @@ var game_state: GameState = GameState.Playing
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 @onready var _pause_menu: PauseMenu = $PauseMenu
+@onready var _background_frame: Sprite2D = $Background
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -118,6 +119,7 @@ func _ready() -> void:
 	_apply_asteroid_visual(true)
 	_update_hud()
 	_update_cockpit_frame()
+	_background_frame.texture = STAR_BACKGROUND_TEXTURE
 	cursor_spawner.spawned.connect(connect_cursor)
 
 
@@ -701,8 +703,8 @@ func _draw() -> void:
 
 	var screen_size: Vector2 = get_viewport_rect().size
 	var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
-	draw_rect(visible_rect, Color.BLACK, true)
-	draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
+	# draw_rect(visible_rect, Color.BLACK, true)
+	# draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
 
 
 func _draw_aim_overlay() -> void:
