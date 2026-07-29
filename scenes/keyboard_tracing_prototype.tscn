@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://pfo1m1ud0227"]
 
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
+[ext_resource type="Texture2D" uid="uid://c5mt24dkail1n" path="res://assets/stars_final.png" id="2_5xpsm"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
 [ext_resource type="Texture2D" uid="uid://ucvr2q47306v" path="res://assets/Asteroids Assets/MovingBlue/asteroidblue1_flyin_sheet.png" id="4_1xbqd"]
 [ext_resource type="Texture2D" uid="uid://d1pe36wcp1n83" path="res://assets/cockpit_player_1.png" id="4_cockpit1"]
@@ -46,6 +47,12 @@ animations = [{
 [node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
 
+[node name="Background" type="Sprite2D" parent="." unique_id=1970710660]
+z_index = -5
+position = Vector2(1505, -158.9375)
+scale = Vector2(3.5024974, 2.7767444)
+texture = ExtResource("2_5xpsm")
+
 [node name="Asteroid" type="Sprite2D" parent="." unique_id=413107605]
 texture_filter = 1
 
@@ -87,6 +94,7 @@ theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
 [node name="TargetLabel" type="Label" parent="HUD" unique_id=158256541]
+visible = false
 offset_left = 565.0
 offset_top = 322.0
 offset_right = 761.0
@@ -114,6 +122,7 @@ theme_override_font_sizes/font_size = 20
 text = "Missed: 0"
 
 [node name="EnergyDisplay" parent="HUD" unique_id=1635434377 instance=ExtResource("3_energy")]
+anchors_preset = -1
 anchor_left = 0.414181
 anchor_top = 0.741265
 anchor_right = 0.560391
