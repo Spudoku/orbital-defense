@@ -5,7 +5,7 @@ const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 const GAME_OVER_PATH = "res://scenes/game_over.tscn"
 const MENU_SCENE_PATH = "res://scenes/control.tscn"
-const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
+# const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 const ASTEROID_TEXTURES = [
@@ -104,7 +104,7 @@ var game_state: GameState = GameState.Playing
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 @onready var _pause_menu: PauseMenu = $PauseMenu
-@onready var _background_frame: Sprite2D = $Background
+# @onready var _background_frame: Sprite2D = $Background
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
@@ -120,7 +120,7 @@ func _ready() -> void:
 	_apply_asteroid_visual(true)
 	_update_hud()
 	_update_cockpit_frame()
-	_background_frame.texture = STAR_BACKGROUND_TEXTURE
+	# _background_frame.texture = STAR_BACKGROUND_TEXTURE
 	cursor_spawner.spawned.connect(connect_cursor)
 
 
@@ -205,9 +205,9 @@ func _process(delta: float) -> void:
 		# _camera.position = _cursor_position
 
 		if missed_asteroids >= 3:
-			game_over()
-			game_end()
+			check_game_over()
 
+		# laser animations 
 		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
 		request_laser_state.rpc(local_laser_pressed)
 		var previous_laser_active: bool = _laser_active
@@ -672,9 +672,6 @@ func back_to_menu() -> void:
 		get_tree().root.add_child(new_menu)
 	pass
 
-func game_over() -> void:
-	get_tree().change_scene_to_file(GAME_OVER_PATH)
-
 func disconnect_all_players() -> void:
 	if not multiplayer.is_server():
 		return
@@ -700,6 +697,41 @@ func player_disconnected(id):
 
 #endregion
 
+#region Game Over
+# Trigger this function on the server when the lose condition is met
+func check_game_over():
+	# Ensure only the server (Peer ID 1) runs this check
+	if multiplayer.is_server():
+		game_state = GameState.Ended
+		set_process(false)
+		set_physics_process(false)
+		set_process_input(false)
+		set_process_unhandled_input(false)
+		trigger_game_over.rpc()
+
+@rpc("authority", "call_local", "reliable")
+func trigger_game_over() -> void:
+	# Disable the gameplay camera and scene processing before swapping to the game-over screen.
+	if is_instance_valid(self):
+		_disable_gameplay_cameras(self)
+		process_mode = Node.PROCESS_MODE_DISABLED
+
+		for child in get_children():
+			if child is Node:
+				if child is Sprite2D or child is CanvasLayer:
+					child.visible = false
+				child.process_mode = Node.PROCESS_MODE_DISABLED
+
+	get_tree().change_scene_to_file(GAME_OVER_PATH)
+
+func _disable_gameplay_cameras(node: Node) -> void:
+	for child in node.get_children():
+		if child is Camera2D:
+			child.enabled = false
+		child.process_mode = Node.PROCESS_MODE_DISABLED
+		_disable_gameplay_cameras(child)
+
+#endregion
 
 #region rendering
 # rendering: handled by clients
@@ -953,6 +985,13 @@ func request_laser_state(pressed: bool) -> void:
 		_laser_active = any_button_down
 		sync_laser_active.rpc(any_button_down)
 
+@rpc("authority", "call_local", "unreliable")
+func sync_laser_active(active: bool) -> void:
+	_laser_active = active
+#endregion
+
+
+#region Laser Animations
 func _get_laser1_animation_node() -> AnimatedSprite2D:
 	for i in range(_cursor.get_child_count()):
 		var child = _cursor.get_child(i)
@@ -1024,7 +1063,4 @@ func _on_laser_inactive(laser_animation: AnimatedSprite2D) -> void:
 	if not laser_animation.is_playing():
 		laser_animation.visible = false
 
-@rpc("authority", "call_local", "unreliable")
-func sync_laser_active(active: bool) -> void:
-	_laser_active = active
 #endregion

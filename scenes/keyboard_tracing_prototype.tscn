@@ -94,6 +94,7 @@ theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
 [node name="TargetLabel" type="Label" parent="HUD" unique_id=158256541]
+visible = false
 offset_left = 565.0
 offset_top = 322.0
 offset_right = 761.0
