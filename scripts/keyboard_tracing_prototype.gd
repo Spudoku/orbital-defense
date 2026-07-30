@@ -8,15 +8,28 @@ const MENU_SCENE_PATH = "res://scenes/control.tscn"
 # const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
-const ASTEROID_TEXTURES = [
-	preload("res://assets/asteroid_brown_1.png"),
-	preload("res://assets/asteroid_brown_2.png"),
-	preload("res://assets/asteroid_brown_3.png"),
-	preload("res://assets/asteroid_brown_4.png"),
-	preload("res://assets/asteroid_blue_1.png"),
-	preload("res://assets/asteroid_blue_2.png"),
-	preload("res://assets/asteroid_blue_3.png"),
-	preload("res://assets/asteroid_blue_4.png"),
+
+
+const ASTEROID_FLYIN_ANIMATIONS = [
+	"blue_flyin_1",
+	"blue_flyin_2",
+	"blue_flyin_3",
+	"blue_flyin_4",
+	"brown_flyin_1",
+	"brown_flyin_2",
+	# "brown_flyin_3",
+	# "brown_flyin_4",
+]
+
+const ASTEROID_EXPLODE_ANIMATIONS = [
+	"blue_explode_1",
+	"blue_explode_2",
+	"blue_explode_3",
+	"blue_explode_4",
+	"brown_explode_1",
+	"brown_explode_2",
+	# "brown_explode_3",
+	# "brown_explode_4",
 ]
 
 const VIEW_SIZE = Vector2(2400, 1350)
@@ -65,7 +78,13 @@ var _cursor: Node2D
 @export var completed_targets: int = 0
 @export var asteroid_time_remaining: float = ASTEROID_TIME_LIMIT
 @export var missed_asteroids: int = 0
+
+
 @export var asteroid_variant: int = 0
+var asteroid_anim_name
+var scale_factor
+
+
 @export var asteroid_position: Vector2 = VIEW_SIZE * 0.5
 @export var asteroid_width: float = ASTEROID_WIDTH_MIN
 var _laser_active: bool = false
@@ -80,6 +99,7 @@ var _last_laser_collision_position: Vector2 = Vector2.ZERO
 var _has_last_laser_collision_position: bool = false
 var _asteroid_visual_initialized: bool = false
 var _last_asteroid_variant: int = -1
+
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
 var children: Array[Node] = [] # this is to store the children of the cursor node
@@ -93,7 +113,9 @@ var game_state: GameState = GameState.Playing
 #region onready_vars
 @onready var _targets_root: Node2D = $Targets
 @onready var _lines: Node2D = $LaserLines
-@onready var _asteroid: Sprite2D = $Asteroid
+@onready var _asteroid: Sprite2D = $Asteroid # TODO: Replace this with animated sprite 2d
+@onready var _asteroid_animation: AnimatedSprite2D = $AnimatedAsteroid
+
 @onready var _aim_overlay: Node2D = $AimOverlay
 # @onready var _camera: Camera2D = $Camera2D
 @onready var _score_label: Label = $HUD/ScoreLabel
@@ -108,6 +130,8 @@ var game_state: GameState = GameState.Playing
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
+
+@onready var explosion_sound = $ExplosionSound
 #endregion
 
 
@@ -117,7 +141,7 @@ func _ready() -> void:
 	if not _pause_menu.resume_requested.is_connected(_on_pause_resume_requested):
 		_pause_menu.resume_requested.connect(_on_pause_resume_requested)
 	_pause_menu.set_pause_visible(false)
-	_apply_asteroid_visual(true)
+	# _apply_asteroid_visual(true)
 	_update_hud()
 	_update_cockpit_frame()
 	# _background_frame.texture = STAR_BACKGROUND_TEXTURE
@@ -190,7 +214,7 @@ func _process(delta: float) -> void:
 	if not multiplayer.has_multiplayer_peer():
 		return
 
-	_apply_asteroid_visual()
+	# _apply_asteroid_visual()
 
 	if not is_instance_valid(_cursor):
 		return
@@ -299,16 +323,27 @@ func _set_pause_state(paused: bool) -> void:
 #region gamelogic
 func _new_asteroid_round() -> void:
 	_clear_laser_line()
-	set_process(false)
-	_asteroid.visible = false
-	# hide targets
 	for target in _targets:
 		target.visible = false
-
-	await get_tree().create_timer(3).timeout
+	set_process(false)
+	# _asteroid.visible = false
+	_asteroid_animation.visible = false
+	# hide targets
 	
 	_reset_targets()
-	_asteroid.visible = true
+
+	var sprite_frames = _asteroid_animation.sprite_frames
+	asteroid_anim_name = ASTEROID_FLYIN_ANIMATIONS[asteroid_variant]
+	
+	var total_frames = sprite_frames.get_frame_count(asteroid_anim_name)
+	var total_time = total_frames / sprite_frames.get_animation_speed(asteroid_anim_name)
+
+
+	await get_tree().create_timer(total_time + 0.25).timeout
+	
+	
+	# _asteroid.visible = false
+	_asteroid_animation.visible = true
 	for target in _targets:
 		target.visible = true
 	set_process(true)
@@ -319,7 +354,7 @@ func _reset_targets() -> void:
 	if not multiplayer.is_server():
 		return
 
-
+	
 	_randomize_asteroid()
 	_randomize_target_positions()
 	completed_targets = 0
@@ -338,10 +373,39 @@ func _update_asteroid_timer(delta: float) -> void:
 
 func _complete_asteroid() -> void:
 	print("asteroid completed!")
+	_clear_laser_line()
+	for target in _targets:
+		target.visible = false
 	set_process(false)
 	# TODO: play asteroid explosion effects
-	var animation_length = 0.5
-	await get_tree().create_timer(animation_length).timeout
+		# determine which asteroid it is
+		# play corresponding animation
+		# play sound effect
+
+	# compute animation stuff
+	
+	asteroid_anim_name = ASTEROID_EXPLODE_ANIMATIONS[asteroid_variant]
+	var cur_sprite_frames = _asteroid_animation.sprite_frames
+
+	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
+	
+
+	var texture_size: Vector2 = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_size()
+	scale_factor = asteroid_width / texture_size.x
+
+	
+	var sprite_frames = _asteroid_animation.sprite_frames
+
+	var total_frames = sprite_frames.get_frame_count(asteroid_anim_name)
+	var total_time = total_frames / sprite_frames.get_animation_speed(asteroid_anim_name)
+	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
+	_asteroid_animation.play(asteroid_anim_name)
+
+	explosion_sound.play()
+	await get_tree().create_timer(total_time).timeout
+	# TODO: play explode animation
+	_asteroid_animation.visible = false
+	await get_tree().create_timer(1).timeout
 
 
 	if multiplayer.is_server():
@@ -353,11 +417,14 @@ func _complete_asteroid() -> void:
 
 
 func _miss_asteroid() -> void:
+	_clear_laser_line()
+	for target in _targets:
+		target.visible = false
 	set_process(false)
 	var animation_length = 0.5
 	await get_tree().create_timer(animation_length).timeout
 	print("asteroid missed!")
-	
+	# TODO: play asteroid miss effects?
 
 	if multiplayer.is_server():
 		missed_asteroids += 1
@@ -372,16 +439,27 @@ func _randomize_asteroid() -> void:
 	if not multiplayer.is_server():
 		return
 
-	var next_variant: int = randi_range(0, ASTEROID_TEXTURES.size() - 1)
-	if ASTEROID_TEXTURES.size() > 1 and next_variant == asteroid_variant:
-		next_variant = (next_variant + randi_range(1, ASTEROID_TEXTURES.size() - 1)) % ASTEROID_TEXTURES.size()
+	var next_variant: int = randi_range(0, ASTEROID_FLYIN_ANIMATIONS.size() - 1)
+	if ASTEROID_FLYIN_ANIMATIONS.size() > 1 and next_variant == asteroid_variant:
+		next_variant = (next_variant + randi_range(1, ASTEROID_FLYIN_ANIMATIONS.size() - 1)) % ASTEROID_FLYIN_ANIMATIONS.size()
 
 	asteroid_variant = next_variant
 	asteroid_width = randf_range(ASTEROID_WIDTH_MIN, ASTEROID_WIDTH_MAX)
 
-	var texture: Texture2D = ASTEROID_TEXTURES[asteroid_variant]
-	var texture_size: Vector2 = texture.get_size()
-	var scale_factor: float = asteroid_width / texture_size.x
+	# var texture: Texture2D = ASTEROID_TEXTURES[asteroid_variant]
+
+	asteroid_anim_name = ASTEROID_FLYIN_ANIMATIONS[asteroid_variant]
+	var cur_sprite_frames = _asteroid_animation.sprite_frames
+
+	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
+	
+
+	var texture_size: Vector2 = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_size()
+
+	print("texture size: " + str(texture_size))
+
+	scale_factor = asteroid_width / texture_size.x
+
 	var display_size: Vector2 = texture_size * scale_factor
 	var minimum_position: Vector2 = Vector2(
 		display_size.x * 0.5 + TARGET_SPAWN_MARGIN,
@@ -396,35 +474,50 @@ func _randomize_asteroid() -> void:
 		randf_range(minimum_position.x, maximum_position.x),
 		randf_range(minimum_position.y, maximum_position.y)
 	)
-	_apply_asteroid_visual(true)
 
 
-func _apply_asteroid_visual(force: bool = false) -> void:
-	if _asteroid == null:
-		return
-
-	if (
-		not force
-		and _asteroid_visual_initialized
-		and asteroid_variant == _last_asteroid_variant
-		and asteroid_position.is_equal_approx(_last_asteroid_position)
-		and is_equal_approx(asteroid_width, _last_asteroid_width)
-	):
-		return
-
-	var safe_variant: int = clampi(asteroid_variant, 0, ASTEROID_TEXTURES.size() - 1)
-	var texture: Texture2D = ASTEROID_TEXTURES[safe_variant]
-	var scale_factor: float = asteroid_width / maxf(texture.get_size().x, 1.0)
-
-	_asteroid.texture = texture
-	_asteroid.position = asteroid_position
-	_asteroid.scale = Vector2.ONE * scale_factor
-	_asteroid.visible = true
+	_asteroid_animation.position = asteroid_position
+	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
+	_asteroid_animation.visible = true
+	
 
 	_asteroid_visual_initialized = true
 	_last_asteroid_variant = asteroid_variant
 	_last_asteroid_position = asteroid_position
 	_last_asteroid_width = asteroid_width
+
+	_asteroid_animation.play(asteroid_anim_name)
+
+# 
+# func _apply_asteroid_visual(force: bool = false, asteroid_anim_name: String = "") -> void:
+# 	if _asteroid == null:
+# 		return
+
+# 	if (
+# 		not force
+# 		and _asteroid_visual_initialized
+# 		and asteroid_variant == _last_asteroid_variant
+# 		and asteroid_position.is_equal_approx(_last_asteroid_position)
+# 		and is_equal_approx(asteroid_width, _last_asteroid_width)
+# 	):
+# 		return
+
+# 	var safe_variant: int = clampi(asteroid_variant, 0, ASTEROID_FLYIN_ANIMATIONS.size() - 1)
+# 	# var texture: Texture2D = ASTEROID_TEXTURES[safe_variant]
+# 	var scale_factor: float = asteroid_width / maxf(texture.get_size().x, 1.0)
+
+# 	# _asteroid.texture = texture
+# 	# _asteroid.position = asteroid_position
+# 	# _asteroid.scale = Vector2.ONE * scale_factor
+# 	# _asteroid.visible = true
+
+# 	_asteroid_animation.scale = Vector2.ONE * scale_factor
+# 	_asteroid_visual_initialized = true
+# 	_last_asteroid_variant = asteroid_variant
+# 	_last_asteroid_position = asteroid_position
+# 	_last_asteroid_width = asteroid_width
+
+# 	_asteroid_animation.play(asteroid_anim_name)
 
 
 # server only
@@ -468,11 +561,21 @@ func _randomize_target_positions() -> void:
 
 func _build_asteroid_target_candidates() -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
-	var image: Image = _asteroid.texture.get_image()
+	# var image: Image = _asteroid.texture.get_image()
+
+	# animation
+
+	var cur_sprite_frames = _asteroid_animation.sprite_frames
+	
+	asteroid_anim_name = ASTEROID_FLYIN_ANIMATIONS[asteroid_variant]
+	print("using animation " + str(asteroid_anim_name))
+	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
+	var image = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_image()
+
 	if image == null or image.is_empty():
 		return candidates
 
-	var asteroid_scale: float = maxf(absf(_asteroid.scale.x), 0.001)
+	var asteroid_scale: float = maxf(absf(_asteroid_animation.scale.x), 0.001)
 	var radius_in_pixels: float = TARGET_PLACEMENT_RADIUS / asteroid_scale
 	var scan_step: int = maxi(8, floori(radius_in_pixels * 0.7))
 	var scan_margin: int = ceili(radius_in_pixels)
@@ -485,9 +588,10 @@ func _build_asteroid_target_candidates() -> Array[Vector2]:
 				continue
 
 			var asteroid_local_position: Vector2 = pixel_position - image_size * 0.5
-			candidates.append(_asteroid.to_global(asteroid_local_position))
+			candidates.append(_asteroid_animation.to_global(asteroid_local_position))
 
 	candidates.shuffle()
+	print("found %d candidates", candidates.size())
 	return candidates
 
 
