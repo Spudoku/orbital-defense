@@ -113,7 +113,7 @@ var game_state: GameState = GameState.Playing
 #region onready_vars
 @onready var _targets_root: Node2D = $Targets
 @onready var _lines: Node2D = $LaserLines
-@onready var _asteroid: Sprite2D = $Asteroid # TODO: Replace this with animated sprite 2d
+
 @onready var _asteroid_animation: AnimatedSprite2D = $AnimatedAsteroid
 
 @onready var _aim_overlay: Node2D = $AimOverlay
@@ -862,8 +862,8 @@ func _draw() -> void:
 	if _cursor == null:
 		return
 
-	var screen_size: Vector2 = get_viewport_rect().size
-	var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
+	# var screen_size: Vector2 = get_viewport_rect().size
+	# var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
 	# draw_rect(visible_rect, Color.BLACK, true)
 	# draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
 
