@@ -298,13 +298,20 @@ func _set_pause_state(paused: bool) -> void:
 
 #region gamelogic
 func _new_asteroid_round() -> void:
-	_reset_targets()
 	_clear_laser_line()
+	set_process(false)
+	_asteroid.visible = false
+	# hide targets
+	for target in _targets:
+		target.visible = false
 
-	if multiplayer.is_server():
-		# TODO: set a timer and wait for asteroid animation
-		# to end
-		return
+	await get_tree().create_timer(3).timeout
+	
+	_reset_targets()
+	_asteroid.visible = true
+	for target in _targets:
+		target.visible = true
+	set_process(true)
 
 
 # target logic: handle as server
@@ -312,7 +319,7 @@ func _reset_targets() -> void:
 	if not multiplayer.is_server():
 		return
 
-	
+
 	_randomize_asteroid()
 	_randomize_target_positions()
 	completed_targets = 0
@@ -330,26 +337,35 @@ func _update_asteroid_timer(delta: float) -> void:
 
 
 func _complete_asteroid() -> void:
-	if not multiplayer.is_server():
-		return
+	print("asteroid completed!")
+	set_process(false)
+	# TODO: play asteroid explosion effects
+	var animation_length = 0.5
+	await get_tree().create_timer(animation_length).timeout
 
-	score += 1
-	energy = MAX_ENERGY
-	_round_flash = 1.0
 
-	_new_asteroid_round()
+	if multiplayer.is_server():
+		score += 1
+		energy = MAX_ENERGY
+		_round_flash = 1.0
+
+		_new_asteroid_round()
 
 
 func _miss_asteroid() -> void:
-	if not multiplayer.is_server():
-		return
+	set_process(false)
+	var animation_length = 0.5
+	await get_tree().create_timer(animation_length).timeout
+	print("asteroid missed!")
+	
 
-	missed_asteroids += 1
-	score = maxi(0, score - 1)
-	energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
-	_round_flash = 1.0
+	if multiplayer.is_server():
+		missed_asteroids += 1
+		score = maxi(0, score - 1)
+		energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
+		_round_flash = 1.0
 
-	_new_asteroid_round()
+		_new_asteroid_round()
 
 # server only
 func _randomize_asteroid() -> void:
