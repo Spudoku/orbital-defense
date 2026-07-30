@@ -1,10 +1,11 @@
 extends Control
 
-var MAIN_MENU = preload("res://scenes/control.tscn")
+const MAIN_MENU_PATH = "res://scenes/control.tscn"
+
 @onready var exit_button = $Exit
 
 func _ready():
 	exit_button.pressed.connect(_on_exit_pressed)
 
 func _on_exit_pressed():
-	get_tree().change_scene_to_packed(MAIN_MENU)
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
