@@ -312,6 +312,7 @@ func _reset_targets() -> void:
 	if not multiplayer.is_server():
 		return
 
+	
 	_randomize_asteroid()
 	_randomize_target_positions()
 	completed_targets = 0
