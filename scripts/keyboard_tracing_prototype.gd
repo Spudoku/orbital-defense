@@ -25,7 +25,7 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
-const ENERGY_DRAIN_PER_SECOND = 15.0
+const ENERGY_DRAIN_PER_SECOND = 20.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 
@@ -34,14 +34,14 @@ const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 const TARGET_COUNT = 5
 const TARGET_SPAWN_MARGIN = 55.0
 const TARGET_SPAWN_TOP = 130.0
-const TARGET_MINIMUM_SPACING = 100.0
-const TARGET_PLACEMENT_RADIUS = 32.0
+const TARGET_MINIMUM_SPACING = 120.0
+const TARGET_PLACEMENT_RADIUS = 52.0
 const TARGET_ALPHA_THRESHOLD = 0.8
 const TARGET_ALPHA_SAMPLE_COUNT = 16
 const OFFSCREEN_BUBBLE_EDGE_MARGIN = 56.0
 const OFFSCREEN_BUBBLE_RADIUS = 17.0
-const ASTEROID_WIDTH_MIN = 960.0
-const ASTEROID_WIDTH_MAX = 1100.0
+const ASTEROID_WIDTH_MIN = 1040.0
+const ASTEROID_WIDTH_MAX = 1180.0
 # target colors
 const TARGET_RED_FILL = Color(1.0, 0.18, 0.22, 0.9)
 const TARGET_RED_GLOW = Color(1.0, 0.18, 0.22, 0.18)
@@ -281,6 +281,7 @@ func _reset_targets() -> void:
 
 	_randomize_asteroid()
 	_randomize_target_positions()
+	_randomize_target_visuals()
 	completed_targets = 0
 	asteroid_time_remaining = ASTEROID_TIME_LIMIT
 	_reset_laser_collision()
@@ -416,6 +417,24 @@ func _randomize_target_positions() -> void:
 		candidates.erase(selected_position)
 
 
+func _randomize_target_visuals() -> void:
+	if not multiplayer.is_server():
+		return
+
+	var variant_offset: int = randi_range(0, WeakpointTarget.VARIANT_COUNT - 1)
+	var variants: Array[int] = []
+	for target_index in range(_targets.size()):
+		variants.append((target_index + variant_offset) % WeakpointTarget.VARIANT_COUNT)
+	variants.shuffle()
+
+	for target_index in range(_targets.size()):
+		var weakpoint: WeakpointTarget = _targets[target_index] as WeakpointTarget
+		if weakpoint == null:
+			continue
+		weakpoint.visual_variant = variants[target_index]
+		weakpoint.rotation = randf_range(-PI, PI)
+
+
 func _build_asteroid_target_candidates() -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
 	var image: Image = _asteroid.texture.get_image()
@@ -545,6 +564,10 @@ func _all_targets_completed() -> bool:
 func _is_target_completed(target: Area2D) -> bool:
 	if not multiplayer.is_server():
 		return false
+
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		return weakpoint.completed
 	return bool(target.get_meta("completed", false))
 
 # server only
@@ -553,16 +576,9 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 		return
 	target.set_meta("completed", completed)
 
-	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
-	var glow: Polygon2D = target.get_node_or_null("Glow") as Polygon2D
-	var ring: Line2D = target.get_node_or_null("Ring") as Line2D
-
-	if fill != null:
-		fill.color = TARGET_DONE_FILL if completed else TARGET_RED_FILL
-	if glow != null:
-		glow.color = TARGET_DONE_GLOW if completed else TARGET_RED_GLOW
-	if ring != null:
-		ring.default_color = TARGET_DONE_RING if completed else TARGET_RED_RING
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		weakpoint.set_completed(completed)
 
 	completed_targets += 1 if completed else 0
 
@@ -765,11 +781,13 @@ func _draw_offscreen_target_bubbles() -> void:
 		)
 
 func _is_target_completed_for_display(target: Area2D) -> bool:
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		return weakpoint.completed
+
 	if bool(target.get_meta("completed", false)):
 		return true
-
-	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
-	return fill != null and fill.color == TARGET_DONE_FILL
+	return false
 
 func _update_cockpit_frame() -> void:
 	var my_id: int = multiplayer.get_unique_id()
