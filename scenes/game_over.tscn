@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://d0sygnepqmck6"]
+
+[ext_resource type="Script" uid="uid://c0ocyxnihcau5" path="res://scenes/game_over.gd" id="1_racf3"]
+[ext_resource type="Texture2D" uid="uid://d3pe4b5h5ctqq" path="res://assets/game_over/GameOver Page BackGround.png" id="1_yxx3c"]
+[ext_resource type="Texture2D" uid="uid://dxajde4vql030" path="res://assets/game_over/Exit Button.png" id="2_ccer4"]
+[ext_resource type="Texture2D" uid="uid://cwr8cwqa1ntav" path="res://assets/game_over/Exit Button Clicked.png" id="3_ccer4"]
+
+[node name="GameOver" type="Control" unique_id=516156993]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_racf3")
+
+[node name="GameOverScreen" type="TextureRect" parent="." unique_id=1626385619]
+layout_mode = 0
+offset_left = -58.0
+offset_top = -698.0
+offset_right = 1960.0
+offset_bottom = 1347.0
+texture = ExtResource("1_yxx3c")
+
+[node name="Exit" type="TextureButton" parent="." unique_id=529328534]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -98.0
+offset_right = 390.0
+grow_vertical = 0
+texture_normal = ExtResource("2_ccer4")
+texture_pressed = ExtResource("3_ccer4")

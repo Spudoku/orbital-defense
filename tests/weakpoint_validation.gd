@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TARGET_RADIUS: float = 52.0
-const ASTEROID_VARIANT_COUNT: int = 8
+const ASTEROID_VARIANT_COUNT: int = 6
 const ASTEROID_TEST_WIDTHS = [1040.0, 1180.0]
 
 var _failures: Array[String] = []
@@ -21,17 +21,16 @@ func _run() -> void:
 	if targets.size() != 5:
 		_failures.append("Expected 5 weakpoints, found %d." % targets.size())
 
-	var asteroid: Sprite2D = level.get_node("Asteroid")
+	var asteroid: AnimatedSprite2D = level.get_node("AnimatedAsteroid")
 	for asteroid_width in ASTEROID_TEST_WIDTHS:
 		for variant in range(ASTEROID_VARIANT_COUNT):
-			level.set("asteroid_variant", variant)
-			level.set("asteroid_width", asteroid_width)
-			level.set("asteroid_position", Vector2(1200.0, 675.0))
-			level.call("_apply_asteroid_visual", true)
+			level.call("synced_asteroid_flyin", variant, Vector2(1200.0, 675.0), asteroid_width)
 			level.call("_randomize_target_positions")
 			level.call("_randomize_target_visuals")
 
-			var image: Image = asteroid.texture.get_image()
+			var animation_name: StringName = asteroid.animation
+			var final_frame: int = asteroid.sprite_frames.get_frame_count(animation_name) - 1
+			var image: Image = asteroid.sprite_frames.get_frame_texture(animation_name, final_frame).get_image()
 			var image_size: Vector2 = Vector2(image.get_width(), image.get_height())
 			var radius_in_pixels: float = TARGET_RADIUS / maxf(absf(asteroid.scale.x), 0.001)
 			var seen_variants: Dictionary = {}
@@ -63,7 +62,7 @@ func _run() -> void:
 	await process_frame
 
 	if _failures.is_empty():
-		print("Weakpoint validation passed for all 8 asteroid variants at both size limits.")
+		print("Weakpoint validation passed for all 6 enabled asteroid variants at both size limits.")
 		quit(0)
 		return
 
