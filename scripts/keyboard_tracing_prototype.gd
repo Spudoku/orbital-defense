@@ -39,7 +39,7 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
-const ENERGY_DRAIN_PER_SECOND = 15.0
+const ENERGY_DRAIN_PER_SECOND = 20.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 
@@ -48,14 +48,22 @@ const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 const TARGET_COUNT = 5
 const TARGET_SPAWN_MARGIN = 55.0
 const TARGET_SPAWN_TOP = 130.0
-const TARGET_MINIMUM_SPACING = 100.0
-const TARGET_PLACEMENT_RADIUS = 32.0
+const TARGET_MINIMUM_SPACING = 120.0
+const TARGET_PLACEMENT_RADIUS = 52.0
 const TARGET_ALPHA_THRESHOLD = 0.8
 const TARGET_ALPHA_SAMPLE_COUNT = 16
-const OFFSCREEN_BUBBLE_EDGE_MARGIN = 56.0
 const OFFSCREEN_BUBBLE_RADIUS = 17.0
-const ASTEROID_WIDTH_MIN = 960.0
-const ASTEROID_WIDTH_MAX = 1100.0
+const COCKPIT_VIEW_LEFT_RATIO = 0.20
+const COCKPIT_VIEW_RIGHT_RATIO = 0.80
+const COCKPIT_VIEW_CENTER_RATIO = Vector2(0.5, 0.43)
+const COCKPIT_VIEW_ALPHA_THRESHOLD = 0.1
+const COCKPIT_VIEW_RAY_STEP = 10.0
+const COCKPIT_ALERT_TOP_LEFT_RATIO = Vector2(0.32, 0.30)
+const COCKPIT_ALERT_TOP_RIGHT_RATIO = Vector2(0.68, 0.30)
+const COCKPIT_ALERT_BOTTOM_LEFT_RATIO = Vector2(0.32, 0.68)
+const COCKPIT_ALERT_BOTTOM_RIGHT_RATIO = Vector2(0.68, 0.68)
+const ASTEROID_WIDTH_MIN = 1040.0
+const ASTEROID_WIDTH_MAX = 1180.0
 # target colors
 const TARGET_RED_FILL = Color(1.0, 0.18, 0.22, 0.9)
 const TARGET_RED_GLOW = Color(1.0, 0.18, 0.22, 0.18)
@@ -102,6 +110,9 @@ var _last_asteroid_variant: int = -1
 
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
+var _player_names_by_id: Dictionary = {}
+var _cockpit_mask_texture: Texture2D
+var _cockpit_mask_image: Image
 var children: Array[Node] = [] # this is to store the children of the cursor node
 var laser_animation_1: AnimatedSprite2D = null
 var laser_animation_2: AnimatedSprite2D = null
@@ -140,8 +151,14 @@ func _ready() -> void:
 		_aim_overlay.draw.connect(_draw_aim_overlay)
 	if not _pause_menu.resume_requested.is_connected(_on_pause_resume_requested):
 		_pause_menu.resume_requested.connect(_on_pause_resume_requested)
+	if not _pause_menu.main_menu_requested.is_connected(_on_pause_main_menu_requested):
+		_pause_menu.main_menu_requested.connect(_on_pause_main_menu_requested)
+	if not _pause_menu.disconnect_notice_dismissed.is_connected(_on_disconnect_notice_dismissed):
+		_pause_menu.disconnect_notice_dismissed.connect(_on_disconnect_notice_dismissed)
 	_pause_menu.set_pause_visible(false)
-	# _apply_asteroid_visual(true)
+	for player_id in GameManager.Players:
+		var player_data = GameManager.Players[player_id]
+		_player_names_by_id[player_id] = str(player_data.get("name", "Player %s" % player_id))
 	_update_hud()
 	_update_cockpit_frame()
 	# _background_frame.texture = STAR_BACKGROUND_TEXTURE
@@ -296,6 +313,27 @@ func _on_pause_resume_requested() -> void:
 	_request_pause_toggle.rpc_id(1)
 
 
+func _on_disconnect_notice_dismissed() -> void:
+	_pause_menu.set_pause_visible(true)
+
+
+func _on_pause_main_menu_requested() -> void:
+	if multiplayer.is_server():
+		game_end()
+	else:
+		_leave_non_host_to_main_menu()
+
+
+func _leave_non_host_to_main_menu() -> void:
+	set_process(false)
+	set_physics_process(false)
+	_pause_menu.set_pause_visible(false)
+	_laser_active = false
+	GameManager.clear_game_state()
+	back_to_menu()
+	queue_free()
+
+
 @rpc("any_peer", "call_local", "reliable")
 func _request_pause_toggle() -> void:
 	if not multiplayer.is_server():
@@ -356,6 +394,7 @@ func _reset_targets() -> void:
 	
 	_randomize_asteroid()
 	_randomize_target_positions()
+	_randomize_target_visuals()
 	completed_targets = 0
 	asteroid_time_remaining = ASTEROID_TIME_LIMIT
 	_reset_laser_collision()
@@ -579,6 +618,24 @@ func _randomize_target_positions() -> void:
 		candidates.erase(selected_position)
 
 
+func _randomize_target_visuals() -> void:
+	if not multiplayer.is_server():
+		return
+
+	var variant_offset: int = randi_range(0, WeakpointTarget.VARIANT_COUNT - 1)
+	var variants: Array[int] = []
+	for target_index in range(_targets.size()):
+		variants.append((target_index + variant_offset) % WeakpointTarget.VARIANT_COUNT)
+	variants.shuffle()
+
+	for target_index in range(_targets.size()):
+		var weakpoint: WeakpointTarget = _targets[target_index] as WeakpointTarget
+		if weakpoint == null:
+			continue
+		weakpoint.visual_variant = variants[target_index]
+		weakpoint.rotation = randf_range(-PI, PI)
+
+
 func _build_asteroid_target_candidates() -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
 	# var image: Image = _asteroid.texture.get_image()
@@ -719,6 +776,10 @@ func _all_targets_completed() -> bool:
 func _is_target_completed(target: Area2D) -> bool:
 	if not multiplayer.is_server():
 		return false
+
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		return weakpoint.completed
 	return bool(target.get_meta("completed", false))
 
 # server only
@@ -727,16 +788,9 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 		return
 	target.set_meta("completed", completed)
 
-	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
-	var glow: Polygon2D = target.get_node_or_null("Glow") as Polygon2D
-	var ring: Line2D = target.get_node_or_null("Ring") as Line2D
-
-	if fill != null:
-		fill.color = TARGET_DONE_FILL if completed else TARGET_RED_FILL
-	if glow != null:
-		glow.color = TARGET_DONE_GLOW if completed else TARGET_RED_GLOW
-	if ring != null:
-		ring.default_color = TARGET_DONE_RING if completed else TARGET_RED_RING
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		weakpoint.set_completed(completed)
 
 	completed_targets += 1 if completed else 0
 
@@ -822,9 +876,15 @@ func disconnect_all_players() -> void:
 		multiplayer.disconnect_peer(player)
 
 func player_disconnected(id):
+	var disconnected_name: String = _get_player_name(id)
+	_player_names_by_id.erase(id)
 	GameManager.Players.erase(id)
 	GameManager.player_ids.erase(id)
+	GameManager._active_laser_peers.erase(id)
 	print("Player disconnected: %d" % id)
+
+	if not multiplayer.is_server():
+		return
 
 	#TODO: restart server game state if all players disconnected
 
@@ -835,7 +895,17 @@ func player_disconnected(id):
 		print("Remaining players: %s" % str(GameManager.Players.keys()))
 		updated_roles = false
 		assign_controls() # reassign controls if a player disconnects
+		_set_pause_state.rpc(true)
+		_pause_menu.show_disconnect_notice(disconnected_name)
 	pass
+
+
+func _get_player_name(player_id: int) -> String:
+	if _player_names_by_id.has(player_id):
+		return str(_player_names_by_id[player_id])
+
+	var player_data: Dictionary = GameManager.Players.get(player_id, {})
+	return str(player_data.get("name", "Player %d" % player_id))
 
 #endregion
 
@@ -949,8 +1019,6 @@ func _draw_laser() -> void:
 # rendering: handled by clients
 func _draw_offscreen_target_bubbles() -> void:
 	var screen_size: Vector2 = get_viewport_rect().size
-	var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
-	var bubble_rect: Rect2 = visible_rect.grow(-OFFSCREEN_BUBBLE_EDGE_MARGIN)
 
 	for target in _targets:
 		if _is_target_completed_for_display(target):
@@ -958,13 +1026,12 @@ func _draw_offscreen_target_bubbles() -> void:
 
 		var target_position: Vector2 = target.global_position
 		var target_radius: float = _get_target_radius(target)
-		if visible_rect.grow(target_radius).has_point(target_position):
+		var target_screen_position: Vector2 = target_position - _cursor.position + screen_size * 0.5
+		if _is_circle_inside_cockpit_view(target_screen_position, target_radius, screen_size):
 			continue
 
-		var bubble_position: Vector2 = Vector2(
-			clampf(target_position.x, bubble_rect.position.x, bubble_rect.position.x + bubble_rect.size.x),
-			clampf(target_position.y, bubble_rect.position.y, bubble_rect.position.y + bubble_rect.size.y)
-		)
+		var bubble_screen_position: Vector2 = _find_cockpit_indicator_position(target_screen_position, screen_size)
+		var bubble_position: Vector2 = bubble_screen_position - screen_size * 0.5 + _cursor.position
 		var target_direction: Vector2 = (target_position - bubble_position).normalized()
 
 		_aim_overlay.draw_circle(bubble_position, OFFSCREEN_BUBBLE_RADIUS + 8.0, TARGET_RED_GLOW)
@@ -977,12 +1044,81 @@ func _draw_offscreen_target_bubbles() -> void:
 			3.0
 		)
 
+
+func _is_circle_inside_cockpit_view(center: Vector2, radius: float, screen_size: Vector2) -> bool:
+	if not _is_cockpit_view_point(center, screen_size):
+		return false
+
+	for sample_index in range(8):
+		var angle: float = TAU * float(sample_index) / 8.0
+		var sample_position: Vector2 = center + Vector2.from_angle(angle) * radius
+		if not _is_cockpit_view_point(sample_position, screen_size):
+			return false
+	return true
+
+
+func _is_cockpit_view_point(screen_position: Vector2, screen_size: Vector2) -> bool:
+	if screen_size.x <= 0.0 or screen_size.y <= 0.0:
+		return false
+	if not Rect2(Vector2.ZERO, screen_size).has_point(screen_position):
+		return false
+
+	var horizontal_ratio: float = screen_position.x / screen_size.x
+	if horizontal_ratio < COCKPIT_VIEW_LEFT_RATIO or horizontal_ratio > COCKPIT_VIEW_RIGHT_RATIO:
+		return false
+
+	var mask_image: Image = _get_cockpit_mask_image()
+	if mask_image == null or mask_image.is_empty():
+		return false
+
+	var texture_position: Vector2 = Vector2(
+		screen_position.x / screen_size.x * mask_image.get_width(),
+		screen_position.y / screen_size.y * mask_image.get_height()
+	)
+	var pixel_x: int = clampi(floori(texture_position.x), 0, mask_image.get_width() - 1)
+	var pixel_y: int = clampi(floori(texture_position.y), 0, mask_image.get_height() - 1)
+	return mask_image.get_pixel(pixel_x, pixel_y).a <= COCKPIT_VIEW_ALPHA_THRESHOLD
+
+
+func _get_cockpit_mask_image() -> Image:
+	var current_texture: Texture2D = _cockpit_frame.texture
+	if current_texture == null:
+		return null
+
+	if current_texture != _cockpit_mask_texture:
+		_cockpit_mask_texture = current_texture
+		_cockpit_mask_image = current_texture.get_image()
+	return _cockpit_mask_image
+
+
+func _find_cockpit_indicator_position(target_screen_position: Vector2, screen_size: Vector2) -> Vector2:
+	var view_center: Vector2 = screen_size * COCKPIT_VIEW_CENTER_RATIO
+	var target_is_right: bool = target_screen_position.x >= view_center.x
+	var target_is_below: bool = target_screen_position.y >= view_center.y
+	var corner_ratio: Vector2
+
+	if target_is_below:
+		corner_ratio = COCKPIT_ALERT_BOTTOM_RIGHT_RATIO if target_is_right else COCKPIT_ALERT_BOTTOM_LEFT_RATIO
+	else:
+		corner_ratio = COCKPIT_ALERT_TOP_RIGHT_RATIO if target_is_right else COCKPIT_ALERT_TOP_LEFT_RATIO
+
+	var corner_position: Vector2 = screen_size * corner_ratio
+	while not _is_cockpit_view_point(corner_position, screen_size):
+		corner_position = corner_position.move_toward(view_center, COCKPIT_VIEW_RAY_STEP)
+		if corner_position.is_equal_approx(view_center):
+			break
+	return corner_position
+
+
 func _is_target_completed_for_display(target: Area2D) -> bool:
+	var weakpoint: WeakpointTarget = target as WeakpointTarget
+	if weakpoint != null:
+		return weakpoint.completed
+
 	if bool(target.get_meta("completed", false)):
 		return true
+	return false
 
-	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
-	return fill != null and fill.color == TARGET_DONE_FILL
 @rpc("authority", "call_local")
 func _update_cockpit_frame() -> void:
 	var my_id: int = multiplayer.get_unique_id()
