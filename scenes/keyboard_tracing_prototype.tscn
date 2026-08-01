@@ -3678,6 +3678,7 @@ spawn_path = NodePath("..")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1222954793]
 replication_config = SubResource("SceneReplicationConfig_x50nh")
+
 [node name="ExplosionSound" type="AudioStreamPlayer2D" parent="." unique_id=79877348]
 stream = ExtResource("14_he78u")
 volume_db = 15.092

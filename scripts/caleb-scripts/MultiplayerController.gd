@@ -163,12 +163,13 @@ func _on_join_button_button_down() -> void:
 	state = LobbyState.JOINING
 	startGameButton.disabled = false
 
+
 	match testingType:
 		TestingType.Railway:
 			var connection_url = "wss://" + Address + ":" + str(port)
 			peer = WebSocketMultiplayerPeer.new()
 			print("Connecting to cloud server: ", connection_url)
-
+		
 			# Call create_client with the WebSocket URL string
 			var error = peer.create_client(connection_url)
 			if error != OK:
@@ -177,12 +178,16 @@ func _on_join_button_button_down() -> void:
 
 		TestingType.Local:
 			peer = ENetMultiplayerPeer.new()
-
+			
+			
 			var error = peer.create_client(Address, port)
 			if error != OK:
 				print("Cannot connect to server!", error)
 				return
 			peer.get_host().compress(ENetConnection.COMPRESS_RANGE_CODER)
+	
+	# var connection_url = Address
+	
 
 	multiplayer.set_multiplayer_peer(peer)
 	print("Joining server...")
