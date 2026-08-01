@@ -236,30 +236,34 @@ func _process(delta: float) -> void:
 		request_laser_state.rpc(local_laser_pressed)
 
 
-		var previous_laser_active: bool = _laser_active
-		_laser_active = local_laser_pressed or _laser_state
-		_laser_was_active = previous_laser_active
+		# var previous_laser_active: bool = _laser_active
+		# _laser_active = local_laser_pressed or _laser_state
+		# _laser_was_active = previous_laser_active
 
-		var previous_local_laser_active: bool = _local_laser_active
-		_local_laser_active = local_laser_pressed
-		_local_laser_was_active = previous_local_laser_active
+		# var previous_local_laser_active: bool = _local_laser_active
+		# _local_laser_active = local_laser_pressed
+		# _local_laser_was_active = previous_local_laser_active
 
-		var my_laser_animation: AnimatedSprite2D = _get_player_laser_animation()
-		if _local_laser_active and not _local_laser_was_active:
-			_on_laser_active_true(my_laser_animation)
-		elif not _local_laser_active and _local_laser_was_active:
-			_on_laser_active_false(my_laser_animation)
-		elif _local_laser_active:
-			_on_laser_active_hold(my_laser_animation)
-		else:
-			_on_laser_inactive(my_laser_animation)
+		# var my_laser_animation: AnimatedSprite2D = _get_player_laser_animation()
+		# if _local_laser_active and not _local_laser_was_active:
+		# 	_on_laser_active_true(my_laser_animation)
+		# elif not _local_laser_active and _local_laser_was_active:
+		# 	_on_laser_active_false(my_laser_animation)
+		# elif _local_laser_active:
+		# 	_on_laser_active_hold(my_laser_animation)
+		# else:
+		# 	_on_laser_inactive(my_laser_animation)
 
 		if _laser_active:
+			print("laser active")
 			_check_target_hits()
 			_update_laser_line()
+			# _on_laser_active_true(my_laser_animation)
 		else:
+			print("laser inactive")
 			_clear_laser_line()
 			_reset_laser_collision()
+			# _on_laser_active_false(my_laser_animation)
 
 		if multiplayer.is_server() and not _targets.is_empty():
 			_update_asteroid_timer(delta)
