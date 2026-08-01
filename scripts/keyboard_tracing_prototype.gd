@@ -422,6 +422,13 @@ func _miss_asteroid() -> void:
 	# 	target.visible = false
 	# set_process(false)
 	sync_end_asteroid_round.rpc()
+
+	# skip the animation if the lose condition is met
+	if missed_asteroids >= 3:
+		check_game_over()
+		return
+	
+	# animation
 	var animation_length = 0.5
 	await get_tree().create_timer(animation_length).timeout
 	print("asteroid missed!")
@@ -976,7 +983,7 @@ func _is_target_completed_for_display(target: Area2D) -> bool:
 
 	var fill: Polygon2D = target.get_node_or_null("Fill") as Polygon2D
 	return fill != null and fill.color == TARGET_DONE_FILL
-
+@rpc("authority", "call_local")
 func _update_cockpit_frame() -> void:
 	var my_id: int = multiplayer.get_unique_id()
 	if my_id == GameManager.player2 and my_id != GameManager.player1:
@@ -1065,6 +1072,7 @@ func assign_controls() -> void:
 			var second_joined_player: int = GameManager.player_ids[player_count - 2]
 			GameManager.sync_controls.rpc(first_joined_player, second_joined_player)
 			print("Player 1: " + str(GameManager.player1) + "; Player 2: " + str(GameManager.player2))
+			_update_cockpit_frame.rpc()
 			pass
 		_:
 			print("Unexpected number of players (%d); shutting game down..." % player_count)
