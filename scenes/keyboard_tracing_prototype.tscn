@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://0q8ww4pgy4g6" path="res://scripts/keyboard_tracing_prototype.gd" id="1_shared"]
 [ext_resource type="PackedScene" uid="uid://tovhl7v6nprq" path="res://scenes/energy_display.tscn" id="3_energy"]
-[ext_resource type="Texture2D" uid="uid://ucvr2q47306v" path="res://assets/Asteroids Assets/MovingBlue/asteroidblue1_flyin_sheet.png" id="4_1xbqd"]
 [ext_resource type="Texture2D" uid="uid://d1pe36wcp1n83" path="res://assets/cockpit_player_1.png" id="4_cockpit1"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="5_pause"]
 
@@ -31,17 +30,6 @@ properties/6/replication_mode = 1
 properties/7/path = NodePath(".:asteroid_width")
 properties/7/spawn = true
 properties/7/replication_mode = 1
-
-[sub_resource type="SpriteFrames" id="SpriteFrames_f1ipo"]
-animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("4_1xbqd")
-}],
-"loop": true,
-"name": &"default",
-"speed": 5.0
-}]
 
 [node name="Level" type="Node2D" unique_id=1750839187]
 script = ExtResource("1_shared")
@@ -143,7 +131,3 @@ spawn_path = NodePath("..")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1222954793]
 replication_config = SubResource("SceneReplicationConfig_x50nh")
-
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=912315446]
-visible = false
-sprite_frames = SubResource("SpriteFrames_f1ipo")
