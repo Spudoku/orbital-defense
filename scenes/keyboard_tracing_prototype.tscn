@@ -3577,6 +3577,7 @@ visible = false
 texture_filter = 1
 
 [node name="AnimatedAsteroid" type="AnimatedSprite2D" parent="." unique_id=912315446]
+position = Vector2(53, 0)
 scale = Vector2(3, 3)
 sprite_frames = SubResource("SpriteFrames_f1ipo")
 animation = &"brown_explode_1"

@@ -234,6 +234,8 @@ func _process(delta: float) -> void:
 		# laser animations 
 		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
 		request_laser_state.rpc(local_laser_pressed)
+
+
 		var previous_laser_active: bool = _laser_active
 		_laser_active = local_laser_pressed or _laser_state
 		_laser_was_active = previous_laser_active
@@ -321,11 +323,10 @@ func _set_pause_state(paused: bool) -> void:
 
 
 #region gamelogic
+@rpc("authority", "call_local", "reliable")
 func _new_asteroid_round() -> void:
 	_clear_laser_line()
-	for target in _targets:
-		target.visible = false
-	set_process(false)
+	sync_end_asteroid_round.rpc()
 	# _asteroid.visible = false
 	_asteroid_animation.visible = false
 	# hide targets
@@ -344,9 +345,7 @@ func _new_asteroid_round() -> void:
 	
 	# _asteroid.visible = false
 	_asteroid_animation.visible = true
-	for target in _targets:
-		target.visible = true
-	set_process(true)
+	sync_new_asteroid_round.rpc()
 
 
 # target logic: handle as server
@@ -374,9 +373,7 @@ func _update_asteroid_timer(delta: float) -> void:
 func _complete_asteroid() -> void:
 	print("asteroid completed!")
 	_clear_laser_line()
-	for target in _targets:
-		target.visible = false
-	set_process(false)
+	sync_end_asteroid_round.rpc()
 	# TODO: play asteroid explosion effects
 		# determine which asteroid it is
 		# play corresponding animation
@@ -401,12 +398,15 @@ func _complete_asteroid() -> void:
 	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
 	_asteroid_animation.play(asteroid_anim_name)
 
-	explosion_sound.play()
+	
 	await get_tree().create_timer(total_time).timeout
+
+	sync_asteroid_explode.rpc(asteroid_variant, asteroid_width)
 	# TODO: play explode animation
 	_asteroid_animation.visible = false
 	await get_tree().create_timer(1).timeout
 
+	set_process(true)
 
 	if multiplayer.is_server():
 		score += 1
@@ -418,14 +418,16 @@ func _complete_asteroid() -> void:
 
 func _miss_asteroid() -> void:
 	_clear_laser_line()
-	for target in _targets:
-		target.visible = false
-	set_process(false)
+	# for target in _targets:
+	# 	target.visible = false
+	# set_process(false)
+	sync_end_asteroid_round.rpc()
 	var animation_length = 0.5
 	await get_tree().create_timer(animation_length).timeout
 	print("asteroid missed!")
 	# TODO: play asteroid miss effects?
-
+	# set_process(true)
+	
 	if multiplayer.is_server():
 		missed_asteroids += 1
 		score = maxi(0, score - 1)
@@ -456,7 +458,6 @@ func _randomize_asteroid() -> void:
 
 	var texture_size: Vector2 = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_size()
 
-	print("texture size: " + str(texture_size))
 
 	scale_factor = asteroid_width / texture_size.x
 
@@ -475,50 +476,62 @@ func _randomize_asteroid() -> void:
 		randf_range(minimum_position.y, maximum_position.y)
 	)
 
-
-	_asteroid_animation.position = asteroid_position
-	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
-	_asteroid_animation.visible = true
 	
-
 	_asteroid_visual_initialized = true
 	_last_asteroid_variant = asteroid_variant
 	_last_asteroid_position = asteroid_position
 	_last_asteroid_width = asteroid_width
 
+	synced_asteroid_flyin.rpc(next_variant, asteroid_position, asteroid_width)
+
+
+@rpc("authority", "call_local", "reliable")
+func synced_asteroid_flyin(variant: int, pos: Vector2, width: float) -> void:
+	asteroid_variant = variant
+	asteroid_position = pos
+	asteroid_width = width
+
+	asteroid_anim_name = ASTEROID_FLYIN_ANIMATIONS[asteroid_variant]
+	var cur_sprite_frames = _asteroid_animation.sprite_frames
+	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
+	var texture_size: Vector2 = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_size()
+	print("texture size: " + str(texture_size))
+	scale_factor = asteroid_width / texture_size.x
+
+	_asteroid_animation.position = asteroid_position
+	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
+	_asteroid_animation.visible = true
 	_asteroid_animation.play(asteroid_anim_name)
+	pass
 
-# 
-# func _apply_asteroid_visual(force: bool = false, asteroid_anim_name: String = "") -> void:
-# 	if _asteroid == null:
-# 		return
+#handle visual effects of an asteroid round ending
+# and handle process
+@rpc("authority", "call_local", "reliable")
+func sync_end_asteroid_round():
+	for target in _targets:
+		target.visible = false
+	set_process(false)
 
-# 	if (
-# 		not force
-# 		and _asteroid_visual_initialized
-# 		and asteroid_variant == _last_asteroid_variant
-# 		and asteroid_position.is_equal_approx(_last_asteroid_position)
-# 		and is_equal_approx(asteroid_width, _last_asteroid_width)
-# 	):
-# 		return
+	pass
+@rpc("authority", "call_local", "reliable")
+func sync_new_asteroid_round():
+	for target in _targets:
+		target.visible = true
+	set_process(true)
 
-# 	var safe_variant: int = clampi(asteroid_variant, 0, ASTEROID_FLYIN_ANIMATIONS.size() - 1)
-# 	# var texture: Texture2D = ASTEROID_TEXTURES[safe_variant]
-# 	var scale_factor: float = asteroid_width / maxf(texture.get_size().x, 1.0)
+@rpc("authority", "call_local", "reliable")
+func sync_asteroid_explode(variant: int, width: float) -> void:
+	asteroid_anim_name = ASTEROID_EXPLODE_ANIMATIONS[variant]
+	var cur_sprite_frames = _asteroid_animation.sprite_frames
+	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
+	var texture_size: Vector2 = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_size()
+	print("texture size: " + str(texture_size))
+	scale_factor = width / texture_size.x
 
-# 	# _asteroid.texture = texture
-# 	# _asteroid.position = asteroid_position
-# 	# _asteroid.scale = Vector2.ONE * scale_factor
-# 	# _asteroid.visible = true
-
-# 	_asteroid_animation.scale = Vector2.ONE * scale_factor
-# 	_asteroid_visual_initialized = true
-# 	_last_asteroid_variant = asteroid_variant
-# 	_last_asteroid_position = asteroid_position
-# 	_last_asteroid_width = asteroid_width
-
-# 	_asteroid_animation.play(asteroid_anim_name)
-
+	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
+	_asteroid_animation.play(asteroid_anim_name)
+	explosion_sound.play()
+	pass
 
 # server only
 func _randomize_target_positions() -> void:
@@ -750,7 +763,8 @@ func game_end() -> void:
 	set_process(false)
 	set_physics_process(false)
 	GameManager.clear_game_state()
-
+	print("Game manager state: " + str(GameManager.game_in_progress))
+	
 
 	# handle things as the server
 	if multiplayer.is_server():
@@ -769,7 +783,7 @@ func game_end() -> void:
 
 func back_to_menu() -> void:
 	print("Going back to menu...")
-
+	queue_redraw()
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -995,9 +1009,7 @@ func _move_cursor(delta: float) -> void:
 	var movement: Vector2 = Vector2.ZERO
 
 	var my_id = multiplayer.get_unique_id()
-	
-	# print("Game manager players: " + str(GameManager.player1) + "; " + str(GameManager.player2))
-	
+
 	# player 1: horizontal input
 	if my_id == GameManager.player1:
 		movement.x = Input.get_axis("move_left", "move_right")
@@ -1023,10 +1035,6 @@ func _move_cursor(delta: float) -> void:
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
 			_miss_asteroid()
-			# game_state = GameState.Ended
-			# set_process(false) # 👈 STOP PROCESS IMMEDIATELY to prevent loop spam!
-			# # this should trigger game ending
-			# game_end()
 		return
 
 	
@@ -1095,20 +1103,20 @@ func request_laser_state(pressed: bool) -> void:
 		sender_id = multiplayer.get_unique_id()
 
 	GameManager._active_laser_peers[sender_id] = pressed
+	sync_laser_active.rpc(sender_id, pressed)
 
-	var any_button_down: bool = false
-	for peer_id in GameManager._active_laser_peers:
-		if GameManager._active_laser_peers[peer_id] == true:
-			any_button_down = true
+		
+@rpc("authority", "call_local", "unreliable")
+func sync_laser_active(peer_id: int, active: bool) -> void:
+	GameManager._active_laser_peers[peer_id] = active
+	# check if any player is firing
+	var any_active = false
+	for pid in GameManager._active_laser_peers:
+		if GameManager._active_laser_peers[pid] == true:
+			any_active = true
 			break
 
-	if _laser_active != any_button_down:
-		_laser_active = any_button_down
-		sync_laser_active.rpc(any_button_down)
-
-@rpc("authority", "call_local", "unreliable")
-func sync_laser_active(active: bool) -> void:
-	_laser_active = active
+	_laser_active = any_active
 #endregion
 
 
