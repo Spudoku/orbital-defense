@@ -82,10 +82,10 @@ max_length = 24
 
 [node name="Label" type="Label" parent="MenuCanvas" unique_id=174060855]
 layout_mode = 0
-offset_left = 700.0
-offset_top = 340.0
-offset_right = 1220.0
-offset_bottom = 380.0
+offset_left = 360.0
+offset_top = 343.0
+offset_right = 1560.0
+offset_bottom = 383.0
 theme_override_colors/font_color = Color(1, 0.92, 0.92, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
@@ -109,9 +109,9 @@ texture_hover = ExtResource("5_host")
 [node name="NotificationLabel" type="Label" parent="MenuCanvas" unique_id=1176623066]
 layout_mode = 0
 offset_left = 700.0
-offset_top = 478.0
+offset_top = 1015.0
 offset_right = 1220.0
-offset_bottom = 525.0
+offset_bottom = 1062.0
 theme_override_colors/font_color = Color(0.78, 0.9, 1, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
@@ -190,9 +190,13 @@ grow_vertical = 2
 focus_mode = 0
 flat = true
 
-[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1248194271]
+[node name="SFX" type="Node" parent="." unique_id=1920041515]
+
+[node name="Menu Music" type="AudioStreamPlayer2D" parent="SFX" unique_id=1248194271]
 stream = ExtResource("15_music")
 autoplay = true
+
+[node name="ButtonPressSFX" type="AudioStreamPlayer2D" parent="SFX" unique_id=775175462]
 
 [connection signal="pressed" from="MenuCanvas/HostButton" to="." method="_on_host_button_button_down"]
 [connection signal="pressed" from="MenuCanvas/JoinButton" to="." method="_on_join_button_button_down"]
