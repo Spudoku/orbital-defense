@@ -756,8 +756,6 @@ func _draw() -> void:
 	if _cursor == null:
 		return
 
-	var screen_size: Vector2 = get_viewport_rect().size
-
 
 func _draw_aim_overlay() -> void:
 	if game_state != GameState.Playing:

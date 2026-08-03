@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bcvegmotq3prb" path="res://scripts/caleb-scripts/MultiplayerController.gd" id="1_sjmnu"]
 [ext_resource type="PackedScene" uid="uid://pfo1m1ud0227" path="res://scenes/keyboard_tracing_prototype.tscn" id="2_r67kn"]
-[ext_resource type="Texture2D" uid="uid://cds6ohn0gk11o" path="res://assets/main_menu_background.png" id="3_menu"]
+[ext_resource type="Texture2D" uid="uid://c80qvxd3ivvop" path="res://assets/Main Menu.png" id="3_6pn8l"]
 [ext_resource type="Texture2D" uid="uid://8lccblaypk1m" path="res://assets/menu_username.png" id="4_username"]
 [ext_resource type="Texture2D" uid="uid://ctu3qe7wngrfk" path="res://assets/menu_host.png" id="5_host"]
 [ext_resource type="Texture2D" uid="uid://bsfhrchd1goo8" path="res://assets/menu_host_pressed.png" id="6_host_pressed"]
@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" uid="uid://h40uhi6hvj2e" path="res://assets/menu_start_pressed.png" id="10_start_pressed"]
 [ext_resource type="Texture2D" uid="uid://ccc2vgvttoamt" path="res://assets/menu_credits.png" id="11_credits"]
 [ext_resource type="Texture2D" uid="uid://88li1w2dreu6" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
+[ext_resource type="Texture2D" uid="uid://rfs731tvm6b3" path="res://assets/Cancel.png" id="13_0jf8d"]
 [ext_resource type="Texture2D" uid="uid://dfln45e201chc" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
 [ext_resource type="Texture2D" uid="uid://dvx556j36w34k" path="res://assets/credits_page.png" id="14_credits_page"]
 [ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="15_music"]
@@ -43,7 +44,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("3_menu")
+texture = ExtResource("3_6pn8l")
 expand_mode = 1
 
 [node name="RoomCode" type="LineEdit" parent="MenuCanvas" unique_id=1747149072]
@@ -161,6 +162,7 @@ offset_top = 905.0
 offset_right = 1074.0
 offset_bottom = 985.0
 mouse_default_cursor_shape = 2
+texture_normal = ExtResource("13_0jf8d")
 texture_pressed = ExtResource("13_cancel_pressed")
 
 [node name="CreditsCanvas" type="Control" parent="." unique_id=1286128652]
