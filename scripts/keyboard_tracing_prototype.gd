@@ -137,6 +137,7 @@ var game_state: GameState = GameState.Playing
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 @onready var _pause_menu: PauseMenu = $PauseMenu
+@onready var _gameplay_music: AudioStreamPlayer = $GameplayMusic
 # @onready var _background_frame: Sprite2D = $Background
 
 @onready var targets_spawner = $MultiplayerSpawner_targets
@@ -147,6 +148,7 @@ var game_state: GameState = GameState.Playing
 
 
 func _ready() -> void:
+	_start_gameplay_music()
 	if not _aim_overlay.draw.is_connected(_draw_aim_overlay):
 		_aim_overlay.draw.connect(_draw_aim_overlay)
 	if not _pause_menu.resume_requested.is_connected(_on_pause_resume_requested):
@@ -188,6 +190,19 @@ func _ready() -> void:
 	# spawn players?
 
 	
+
+func _start_gameplay_music() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+
+	var gameplay_stream: AudioStreamMP3 = _gameplay_music.stream as AudioStreamMP3
+	if gameplay_stream != null:
+		gameplay_stream.loop = true
+
+	if not _gameplay_music.playing:
+		_gameplay_music.play()
+
+
 # create new cursor node
 func instantiate_cursor() -> void:
 	_cursor = CURSOR_SCENE.instantiate()
@@ -844,6 +859,7 @@ func game_end() -> void:
 
 func back_to_menu() -> void:
 	print("Going back to menu...")
+	_gameplay_music.stop()
 	queue_redraw()
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
@@ -923,6 +939,7 @@ func check_game_over():
 
 @rpc("authority", "call_local", "reliable")
 func trigger_game_over() -> void:
+	_gameplay_music.stop()
 	# Disable the gameplay camera and scene processing before swapping to the game-over screen.
 	if is_instance_valid(self):
 		_disable_gameplay_cameras(self)

@@ -34,6 +34,7 @@ enum TestingType {
 
 @onready var notificationLabel = $MenuCanvas/NotificationLabel
 
+@onready var menu_music: AudioStreamPlayer = $SFX/MenuMusic
 @onready var button_press_sfx = $SFX/ButtonPressSFX
 #endregion
 
@@ -91,9 +92,22 @@ func _fit_menu_to_window() -> void:
 	creditsCanvas.scale = Vector2.ONE * menu_scale
 	creditsCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
 
+
+func _play_menu_music() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+
+	var intro_stream: AudioStreamMP3 = menu_music.stream as AudioStreamMP3
+	if intro_stream != null:
+		intro_stream.loop = true
+
+	if not menu_music.playing:
+		menu_music.play()
+
 func init_menu():
 	menuCanvas.visible = true
 	creditsCanvas.visible = false
+	_play_menu_music()
 	cancelButton.disabled = true
 	startGameButton.disabled = true
 	hostButton.disabled = false
@@ -283,6 +297,7 @@ func request_server_to_start():
 @rpc("any_peer", "call_local")
 func startGame():
 	if gameScene:
+		menu_music.stop()
 		var scene = gameScene.instantiate()
 		
 		get_tree().root.add_child(scene)

@@ -20,6 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://4jgp7bbda0ci" path="res://assets/Asteroids Assets/MovingBrown/asteroidbrown3_flyin_sheet.png" id="13_eg07o"]
 [ext_resource type="Texture2D" uid="uid://bl2bfgvslw4c8" path="res://assets/Asteroids Assets/MovingBrown/asteroidbrown4_flyin_sheet.png" id="14_8sj0w"]
 [ext_resource type="AudioStream" uid="uid://becjdxx8qu25s" path="res://SFX/ingame/explosions/760509__samsterbirdies__astronomical-explosion.ogg" id="14_he78u"]
+[ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="15_gameplay_music"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_f1pa6"]
 atlas = ExtResource("3_n2dsk")
@@ -3678,6 +3679,9 @@ spawn_path = NodePath("..")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1222954793]
 replication_config = SubResource("SceneReplicationConfig_x50nh")
+
+[node name="GameplayMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("15_gameplay_music")
 
 [node name="ExplosionSound" type="AudioStreamPlayer2D" parent="." unique_id=79877348]
 stream = ExtResource("14_he78u")
