@@ -273,7 +273,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_pause_resume_requested() -> void:
 	_request_pause_toggle.rpc_id(1)
 
-
+#region pause
 @rpc("any_peer", "call_local", "reliable")
 func _request_pause_toggle() -> void:
 	if not multiplayer.is_server():
@@ -299,6 +299,7 @@ func _set_pause_state(paused: bool) -> void:
 	queue_redraw()
 	_aim_overlay.queue_redraw()
 
+#endregion
 
 #region gamelogic
 func _new_asteroid_round() -> void:
@@ -725,6 +726,8 @@ func trigger_game_over() -> void:
 				if child is Sprite2D or child is CanvasLayer:
 					child.visible = false
 				child.process_mode = Node.PROCESS_MODE_DISABLED
+		
+		queue_free()
 
 	get_tree().change_scene_to_file(GAME_OVER_PATH)
 

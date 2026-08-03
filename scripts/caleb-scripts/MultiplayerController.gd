@@ -274,6 +274,12 @@ func request_server_to_start():
 @rpc("any_peer", "call_local")
 func startGame():
 	if gameScene:
+		for child in get_tree().root.get_children():
+			if child == self:
+				continue
+			if child.name == "Level" and is_instance_valid(child):
+				child.queue_free()
+
 		var scene = gameScene.instantiate()
 		
 		get_tree().root.add_child(scene)
