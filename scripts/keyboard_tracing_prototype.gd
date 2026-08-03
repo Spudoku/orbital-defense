@@ -212,7 +212,10 @@ func _process(delta: float) -> void:
 		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
 		request_laser_state.rpc(local_laser_pressed)
 		var previous_laser_active: bool = _laser_active
-		_laser_active = local_laser_pressed or _laser_state
+		if multiplayer.is_server():
+			_laser_active = _laser_active or local_laser_pressed
+		else:
+			_laser_active = local_laser_pressed or _laser_state
 		_laser_was_active = previous_laser_active
 
 		var previous_local_laser_active: bool = _local_laser_active
@@ -230,6 +233,9 @@ func _process(delta: float) -> void:
 			_on_laser_inactive(my_laser_animation)
 
 		if _laser_active:
+			if multiplayer.is_server():
+				energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+				sync_energy.rpc(energy)
 			_check_target_hits()
 			_update_laser_line()
 		else:
@@ -339,6 +345,7 @@ func _complete_asteroid() -> void:
 
 	score += 1
 	energy = MAX_ENERGY
+	sync_energy.rpc(energy)
 	_round_flash = 1.0
 
 	_new_asteroid_round()
@@ -351,6 +358,7 @@ func _miss_asteroid() -> void:
 	missed_asteroids += 1
 	score = maxi(0, score - 1)
 	energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
+	sync_energy.rpc(energy)
 	_round_flash = 1.0
 
 	_new_asteroid_round()
@@ -951,8 +959,7 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 
 	if next_position == _cursor.position:
 		return
-	if _laser_active:
-		energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+
 	_cursor.position = next_position
 	_cursor_position = _cursor.position
 	pass
@@ -982,6 +989,11 @@ func request_laser_state(pressed: bool) -> void:
 @rpc("authority", "call_local", "unreliable")
 func sync_laser_active(active: bool) -> void:
 	_laser_active = active
+	_laser_state = active
+
+@rpc("authority", "call_local", "reliable")
+func sync_energy(new_energy: float) -> void:
+	energy = clampf(new_energy, 0.0, MAX_ENERGY)
 #endregion
 
 
