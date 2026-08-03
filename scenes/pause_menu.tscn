@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cxqig75brmpn7"]
 
 [ext_resource type="Script" uid="uid://c30s2miqtsuna" path="res://scripts/pause_menu.gd" id="1_pause"]
+[ext_resource type="PackedScene" path="res://scenes/volume_control.tscn" id="2_volume"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.035, 0.055, 0.075, 0.96)
@@ -66,7 +67,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Screen/Center" unique_id=1433986399]
-custom_minimum_size = Vector2(420, 335)
+custom_minimum_size = Vector2(440, 440)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
@@ -88,6 +89,10 @@ theme_override_colors/font_color = Color(0.86, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "PAUSED"
 horizontal_alignment = 1
+
+[node name="VolumeControl" parent="Screen/Center/Panel/Margin/Content" instance=ExtResource("2_volume")]
+layout_mode = 2
+size_flags_horizontal = 4
 
 [node name="ResumeButton" type="Button" parent="Screen/Center/Panel/Margin/Content" unique_id=2022029399]
 custom_minimum_size = Vector2(240, 68)

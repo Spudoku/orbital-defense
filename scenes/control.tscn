@@ -14,7 +14,8 @@
 [ext_resource type="Texture2D" uid="uid://88li1w2dreu6" path="res://assets/menu_credits_pressed.png" id="12_credits_pressed"]
 [ext_resource type="Texture2D" uid="uid://dfln45e201chc" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
 [ext_resource type="Texture2D" uid="uid://dvx556j36w34k" path="res://assets/credits_page.png" id="14_credits_page"]
-[ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="15_music"]
+[ext_resource type="AudioStream" path="res://SFX/Atlas_Arena_Intro.mp3" id="15_music"]
+[ext_resource type="PackedScene" path="res://scenes/volume_control.tscn" id="16_volume"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_clear"]
 bg_color = Color(1, 1, 1, 0)
@@ -162,6 +163,13 @@ offset_bottom = 985.0
 mouse_default_cursor_shape = 2
 texture_pressed = ExtResource("13_cancel_pressed")
 
+[node name="VolumeControl" parent="MenuCanvas" instance=ExtResource("16_volume")]
+layout_mode = 0
+offset_left = 1538.0
+offset_top = 964.0
+offset_right = 1878.0
+offset_bottom = 1032.0
+
 [node name="CreditsCanvas" type="Control" parent="." unique_id=1286128652]
 visible = false
 anchors_preset = 0
@@ -204,9 +212,8 @@ flat = true
 
 [node name="SFX" type="Node" parent="." unique_id=1920041515]
 
-[node name="Menu Music" type="AudioStreamPlayer2D" parent="SFX" unique_id=1248194271]
+[node name="MenuMusic" type="AudioStreamPlayer" parent="SFX" unique_id=1248194271]
 stream = ExtResource("15_music")
-autoplay = true
 
 [node name="ButtonPressSFX" type="AudioStreamPlayer2D" parent="SFX" unique_id=775175462]
 
