@@ -11,23 +11,23 @@ const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 
 
 const ASTEROID_FLYIN_ANIMATIONS = [
-	# "blue_flyin_1",
-	# "blue_flyin_2",
-	# "blue_flyin_3",
-	# "blue_flyin_4",
-	# "brown_flyin_1",
-	# "brown_flyin_2",
+	"blue_flyin_1",
+	"blue_flyin_2",
+	"blue_flyin_3",
+	"blue_flyin_4",
+	"brown_flyin_1",
+	"brown_flyin_2",
 	"brown_flyin_3",
 	"brown_flyin_4",
 ]
 
 const ASTEROID_EXPLODE_ANIMATIONS = [
-	# "blue_explode_1",
-	# "blue_explode_2",
-	# "blue_explode_3",
-	# "blue_explode_4",
-	# "brown_explode_1",
-	# "brown_explode_2",
+	"blue_explode_1",
+	"blue_explode_2",
+	"blue_explode_3",
+	"blue_explode_4",
+	"brown_explode_1",
+	"brown_explode_2",
 	"brown_explode_3",
 	"brown_explode_4",
 ]
@@ -469,7 +469,7 @@ func _complete_asteroid() -> void:
 	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
 	_asteroid_animation.play(asteroid_anim_name)
 
-	
+	laser_sound.stop()
 	await get_tree().create_timer(total_time).timeout
 
 	sync_asteroid_explode.rpc(asteroid_variant, asteroid_width)
@@ -501,6 +501,7 @@ func _miss_asteroid() -> void:
 	
 	# animation
 	var animation_length = 0.5
+	laser_sound.stop()
 	await get_tree().create_timer(animation_length).timeout
 	print("asteroid missed!")
 	# TODO: play asteroid miss effects?

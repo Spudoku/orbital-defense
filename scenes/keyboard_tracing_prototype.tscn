@@ -3126,7 +3126,12 @@ texture_filter = 1
 position = Vector2(53, 0)
 scale = Vector2(3, 3)
 sprite_frames = SubResource("SpriteFrames_f1ipo")
-animation = &"brown_flyin_3"
+animation = &"brown_flyin_4"
+
+[node name="ExplosionSound" type="AudioStreamPlayer2D" parent="AnimatedAsteroid" unique_id=869618717]
+position = Vector2(-17.666668, 0)
+scale = Vector2(0.33333334, 0.33333334)
+stream = ExtResource("14_he78u")
 
 [node name="LaserLines" type="Node2D" parent="." unique_id=1395298379]
 
