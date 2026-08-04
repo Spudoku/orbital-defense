@@ -11,25 +11,25 @@ const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 
 
 const ASTEROID_FLYIN_ANIMATIONS = [
-	"blue_flyin_1",
-	"blue_flyin_2",
-	"blue_flyin_3",
-	"blue_flyin_4",
-	"brown_flyin_1",
-	"brown_flyin_2",
-	# "brown_flyin_3",
-	# "brown_flyin_4",
+	# "blue_flyin_1",
+	# "blue_flyin_2",
+	# "blue_flyin_3",
+	# "blue_flyin_4",
+	# "brown_flyin_1",
+	# "brown_flyin_2",
+	"brown_flyin_3",
+	"brown_flyin_4",
 ]
 
 const ASTEROID_EXPLODE_ANIMATIONS = [
-	"blue_explode_1",
-	"blue_explode_2",
-	"blue_explode_3",
-	"blue_explode_4",
-	"brown_explode_1",
-	"brown_explode_2",
-	# "brown_explode_3",
-	# "brown_explode_4",
+	# "blue_explode_1",
+	# "blue_explode_2",
+	# "blue_explode_3",
+	# "blue_explode_4",
+	# "brown_explode_1",
+	# "brown_explode_2",
+	"brown_explode_3",
+	"brown_explode_4",
 ]
 
 const VIEW_SIZE = Vector2(2400, 1350)
@@ -190,7 +190,6 @@ func _ready() -> void:
 	# spawn players?
 
 	
-
 func _start_gameplay_music() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
