@@ -95,7 +95,7 @@ var scale_factor
 
 @export var asteroid_position: Vector2 = VIEW_SIZE * 0.5
 @export var asteroid_width: float = ASTEROID_WIDTH_MIN
-var _laser_active: bool = false
+@export var _laser_active: bool = false
 var _laser_was_active: bool = false
 var _laser_state: bool = false
 var _local_laser_active: bool = false
@@ -143,7 +143,9 @@ var game_state: GameState = GameState.Playing
 @onready var targets_spawner = $MultiplayerSpawner_targets
 @onready var cursor_spawner = $MultiplayerSpawner_cursor
 
-@onready var explosion_sound = $ExplosionSound
+@onready var explosion_sound = $AnimatedAsteroid/ExplosionSound
+@onready var laser_sound = $LaserSound
+@onready var target_hit_sound = $LaserHitSound
 #endregion
 
 
@@ -190,7 +192,6 @@ func _ready() -> void:
 	# spawn players?
 
 	
-
 func _start_gameplay_music() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
@@ -266,10 +267,19 @@ func _process(delta: float) -> void:
 		# laser animations 
 		var local_laser_pressed: bool = Input.is_action_pressed("fire_laser")
 		request_laser_state.rpc(local_laser_pressed)
+		GameManager._active_laser_peers[GameManager.get_multiplayer().get_unique_id()] = local_laser_pressed
 
 
 		var previous_laser_active: bool = _laser_active
-		_laser_active = local_laser_pressed or _laser_state
+
+		for pid in GameManager._active_laser_peers.keys():
+			if GameManager._active_laser_peers[pid]:
+				_laser_active = true
+				break
+			else:
+				_laser_active = false
+
+		# _laser_active = local_laser_pressed or _laser_state
 		_laser_was_active = previous_laser_active
 
 		var previous_local_laser_active: bool = _local_laser_active
@@ -278,13 +288,20 @@ func _process(delta: float) -> void:
 
 		var my_laser_animation: AnimatedSprite2D = _get_player_laser_animation()
 		if _local_laser_active and not _local_laser_was_active:
+			if not laser_sound.playing:
+				laser_sound.play()
+			
 			_on_laser_active_true(my_laser_animation)
 		elif not _local_laser_active and _local_laser_was_active:
 			_on_laser_active_false(my_laser_animation)
 		elif _local_laser_active:
+			if not laser_sound.playing:
+				laser_sound.play()
 			_on_laser_active_hold(my_laser_animation)
 		else:
 			_on_laser_inactive(my_laser_animation)
+			if laser_sound:
+				laser_sound.stop()
 
 		if _laser_active:
 			_check_target_hits()
@@ -808,6 +825,12 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 		weakpoint.set_completed(completed)
 
 	completed_targets += 1 if completed else 0
+	play_laser_hit_sound.rpc()
+
+@rpc("authority", "call_local", "reliable")
+func play_laser_hit_sound() -> void:
+	target_hit_sound.play()
+		
 
 # server only
 func _get_target_radius(target: Area2D) -> float:
@@ -897,6 +920,7 @@ func player_disconnected(id):
 	GameManager.Players.erase(id)
 	GameManager.player_ids.erase(id)
 	GameManager._active_laser_peers.erase(id)
+	
 	print("Player disconnected: %d" % id)
 
 	if not multiplayer.is_server():
