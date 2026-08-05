@@ -3478,6 +3478,10 @@ z_index = 20
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -56.0
+offset_top = -38.0
+offset_right = 58.0
+offset_bottom = 76.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -3539,8 +3543,10 @@ anchor_left = 0.414181
 anchor_top = 0.741265
 anchor_right = 0.560391
 anchor_bottom = 0.793677
-offset_right = 0.0
-offset_bottom = 0.0
+offset_left = -11.227539
+offset_top = 45.433777
+offset_right = 8.049316
+offset_bottom = 52.828857
 
 [node name="ClientLabel" type="Label" parent="HUD" unique_id=1417146264]
 offset_left = 23.0

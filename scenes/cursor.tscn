@@ -170,7 +170,7 @@ animations = [{
 }],
 "loop": false,
 "name": &"laser_end",
-"speed": 5.0
+"speed": 10.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -181,7 +181,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"laser_held",
-"speed": 5.0
+"speed": 10.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -204,7 +204,7 @@ animations = [{
 }],
 "loop": false,
 "name": &"laser_start",
-"speed": 5.0
+"speed": 10.0
 }]
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_d7ugn"]
@@ -228,7 +228,7 @@ visible = false
 position = Vector2(-2, 193)
 scale = Vector2(2.642, 1.977)
 sprite_frames = SubResource("SpriteFrames_6ar1r")
-animation = &"laser_start"
+animation = &"laser_end"
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1359759773]
 replication_config = SubResource("SceneReplicationConfig_d7ugn")

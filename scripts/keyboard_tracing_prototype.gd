@@ -4,8 +4,8 @@ extends Node2D
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 const GAME_OVER_PATH = "res://scenes/game_over.tscn"
+const GAME_OVER_SCENE = preload("res://scenes/game_over.tscn")
 const MENU_SCENE_PATH = "res://scenes/control.tscn"
-# const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 
@@ -39,6 +39,7 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
+const ENERGY_DRAIN_PER_SECOND = 30
 const MAX_LIVES = 3
 const ENERGY_DRAIN_PER_SECOND = 20.0
 const ASTEROID_TIME_LIMIT = 20.0
@@ -151,7 +152,7 @@ var game_state: GameState = GameState.Playing
 @onready var explosion_sound = $ExplosionSound
 #endregion
 
-
+#region Instantiate
 func _ready() -> void:
 	_start_gameplay_music()
 	if not _aim_overlay.draw.is_connected(_draw_aim_overlay):
@@ -239,8 +240,9 @@ func instantiate_targets() -> void:
 		_targets_root.add_child(new_target)
 		_targets.append(new_target)
 	pass
+#endregion
 
-
+#region Main loop
 # main game loop powering everything
 # process handles the following logic:
 # handle input
@@ -273,7 +275,10 @@ func _process(delta: float) -> void:
 
 
 		var previous_laser_active: bool = _laser_active
-		_laser_active = local_laser_pressed or _laser_state
+		if multiplayer.is_server():
+			_laser_active = _laser_active or local_laser_pressed
+		else:
+			_laser_active = local_laser_pressed or _laser_state
 		_laser_was_active = previous_laser_active
 
 		var previous_local_laser_active: bool = _local_laser_active
@@ -291,11 +296,16 @@ func _process(delta: float) -> void:
 			_on_laser_inactive(my_laser_animation)
 
 		if _laser_active:
+			if multiplayer.is_server():
+				energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+				sync_energy.rpc(energy)
 			_check_target_hits()
 			_update_laser_line()
 		else:
 			_clear_laser_line()
 			_reset_laser_collision()
+			for target in _targets:
+				_set_target_completed(target, false)
 
 		if multiplayer.is_server() and not _targets.is_empty():
 			_update_asteroid_timer(delta)
@@ -316,6 +326,7 @@ func _process(delta: float) -> void:
 	elif game_state == GameState.Ended:
 		game_end()
 		pass
+#endregion
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -353,6 +364,7 @@ func _leave_non_host_to_main_menu() -> void:
 	queue_free()
 
 
+#region pause
 @rpc("any_peer", "call_local", "reliable")
 func _request_pause_toggle() -> void:
 	if not multiplayer.is_server():
@@ -378,6 +390,7 @@ func _set_pause_state(paused: bool) -> void:
 	queue_redraw()
 	_aim_overlay.queue_redraw()
 
+#endregion
 
 #region gamelogic
 @rpc("authority", "call_local", "reliable")
@@ -469,6 +482,7 @@ func _complete_asteroid() -> void:
 	if multiplayer.is_server():
 		score += 1
 		energy = MAX_ENERGY
+		sync_energy.rpc(energy)
 		_round_flash = 1.0
 
 		_new_asteroid_round()
@@ -973,6 +987,8 @@ func trigger_game_over() -> void:
 				if child is Sprite2D or child is CanvasLayer:
 					child.visible = false
 				child.process_mode = Node.PROCESS_MODE_DISABLED
+		
+		queue_free()
 
 	# Clients stop receiving replication messages before their Level is removed.
 	# The host keeps its peer alive until every responsive client has detached.
@@ -1038,11 +1054,6 @@ func _draw() -> void:
 	if _cursor == null:
 		return
 
-	# var screen_size: Vector2 = get_viewport_rect().size
-	# var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
-	# draw_rect(visible_rect, Color.BLACK, true)
-	# draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
-
 
 func _draw_aim_overlay() -> void:
 	if game_state != GameState.Playing:
@@ -1051,7 +1062,7 @@ func _draw_aim_overlay() -> void:
 		return
 
 	_draw_laser()
-	_draw_offscreen_target_bubbles()
+	# _draw_offscreen_target_bubbles()
 	_draw_cursor_box()
 
 func _update_laser_line() -> void:
@@ -1077,16 +1088,6 @@ func _update_laser_line() -> void:
 	if last_point.distance_to(_cursor.position) >= LINE_POINT_MIN_DISTANCE:
 		_current_line.add_point(_cursor.position)
 
-# rendering: handled by clients
-func _draw_grid() -> void:
-	var grid_color: Color = Color(0.12, 0.19, 0.25, 0.28)
-	var start: Vector2 = Vector2(-BACKGROUND_PADDING, -BACKGROUND_PADDING)
-	var end: Vector2 = VIEW_SIZE + Vector2(BACKGROUND_PADDING, BACKGROUND_PADDING)
-
-	for x in range(int(start.x), int(end.x) + 1, 40):
-		draw_line(Vector2(x, start.y), Vector2(x, end.y), grid_color, 1.0)
-	for y in range(int(start.y), int(end.y) + 1, 40):
-		draw_line(Vector2(start.x, y), Vector2(end.x, y), grid_color, 1.0)
 
 # rendering: handled by clients
 func _draw_laser() -> void:
@@ -1317,8 +1318,7 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 
 	if next_position == _cursor.position:
 		return
-	
-	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+
 	_cursor.position = next_position
 	_cursor_position = _cursor.position
 	pass
@@ -1348,6 +1348,11 @@ func sync_laser_active(peer_id: int, active: bool) -> void:
 			break
 
 	_laser_active = any_active
+	_laser_state = active
+
+@rpc("authority", "call_local", "reliable")
+func sync_energy(new_energy: float) -> void:
+	energy = clampf(new_energy, 0.0, MAX_ENERGY)
 #endregion
 
 
