@@ -846,11 +846,15 @@ func _set_target_completed(target: Area2D, completed: bool) -> void:
 	if weakpoint != null:
 		weakpoint.set_completed(completed)
 
-	completed_targets += 1 if completed else 0
-	play_laser_hit_sound.rpc()
+	var target_position = target.global_position
+
+	if completed:
+		completed_targets += 1
+		play_laser_hit_sound.rpc(target_position)
 
 @rpc("authority", "call_local", "reliable")
-func play_laser_hit_sound() -> void:
+func play_laser_hit_sound(location: Vector2) -> void:
+	target_hit_sound.global_position = location
 	target_hit_sound.play()
 		
 
