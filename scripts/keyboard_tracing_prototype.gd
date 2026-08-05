@@ -992,7 +992,7 @@ func _draw_aim_overlay() -> void:
 		return
 
 	_draw_laser()
-	_draw_offscreen_target_bubbles()
+	# _draw_offscreen_target_bubbles()
 	_draw_cursor_box()
 
 func _update_laser_line() -> void:
