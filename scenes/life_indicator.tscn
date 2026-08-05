@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/life_indicator.gd" id="1_lives"]
+[ext_resource type="Texture2D" path="res://assets/hud/life/HudBackDrop.png" id="2_player1"]
+[ext_resource type="Texture2D" path="res://assets/hud/life/HudBackDropPlayer2.png" id="3_player2"]
+[ext_resource type="Texture2D" path="res://assets/hud/life/Health_X.png" id="4_life"]
+
+[node name="LifeIndicator" type="Control"]
+layout_mode = 3
+anchors_preset = 2
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_top = -152.0
+offset_right = 386.0
+grow_vertical = 0
+mouse_filter = 2
+z_index = 50
+script = ExtResource("1_lives")
+player_1_backdrop = ExtResource("2_player1")
+player_2_backdrop = ExtResource("3_player2")
+
+[node name="Backdrop" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_player1")
+expand_mode = 1
+
+[node name="Life1" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 29.0
+offset_right = 112.0
+offset_bottom = 123.0
+mouse_filter = 2
+texture = ExtResource("4_life")
+expand_mode = 1
+
+[node name="Life2" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 146.0
+offset_top = 29.0
+offset_right = 241.0
+offset_bottom = 123.0
+mouse_filter = 2
+texture = ExtResource("4_life")
+expand_mode = 1
+
+[node name="Life3" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 275.0
+offset_top = 29.0
+offset_right = 370.0
+offset_bottom = 123.0
+mouse_filter = 2
+texture = ExtResource("4_life")
+expand_mode = 1

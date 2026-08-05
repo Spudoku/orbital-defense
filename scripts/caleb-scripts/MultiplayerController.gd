@@ -298,6 +298,12 @@ func request_server_to_start():
 func startGame():
 	if gameScene:
 		menu_music.stop()
+		for child in get_tree().root.get_children():
+			if child == self:
+				continue
+			if child.name == "Level" and is_instance_valid(child):
+				child.queue_free()
+
 		var scene = gameScene.instantiate()
 		
 		get_tree().root.add_child(scene)

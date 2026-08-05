@@ -4,8 +4,8 @@ extends Node2D
 const TARGET_SCENE = preload("res://scenes/target_circle.tscn")
 const CURSOR_SCENE = preload("res://scenes/cursor.tscn")
 const GAME_OVER_PATH = "res://scenes/game_over.tscn"
+const GAME_OVER_SCENE = preload("res://scenes/game_over.tscn")
 const MENU_SCENE_PATH = "res://scenes/control.tscn"
-# const STAR_BACKGROUND_TEXTURE = preload("res://assets/stars_final.png")
 const PLAYER_1_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_1.png")
 const PLAYER_2_COCKPIT_TEXTURE = preload("res://assets/cockpit_player_2.png")
 
@@ -39,9 +39,11 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
+const MAX_LIVES = 3
 const ENERGY_DRAIN_PER_SECOND = 20.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
+const GAME_OVER_DISCONNECT_TIMEOUT_SECONDS = 2.0
 
 
 # target-related constants
@@ -107,10 +109,12 @@ var _last_laser_collision_position: Vector2 = Vector2.ZERO
 var _has_last_laser_collision_position: bool = false
 var _asteroid_visual_initialized: bool = false
 var _last_asteroid_variant: int = -1
+var _asteroid_miss_in_progress: bool = false
 
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
 var _player_names_by_id: Dictionary = {}
+var _game_over_transition_started: bool = false
 var _cockpit_mask_texture: Texture2D
 var _cockpit_mask_image: Image
 var children: Array[Node] = [] # this is to store the children of the cursor node
@@ -134,6 +138,7 @@ var game_state: GameState = GameState.Playing
 @onready var _timer_label: Label = $HUD/TimerLabel
 @onready var _miss_label: Label = $HUD/MissLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
+@onready var _life_indicator = $HUD/LifeIndicator
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 @onready var _pause_menu: PauseMenu = $PauseMenu
@@ -148,7 +153,7 @@ var game_state: GameState = GameState.Playing
 @onready var target_hit_sound = $LaserHitSound
 #endregion
 
-
+#region Instantiate
 func _ready() -> void:
 	_start_gameplay_music()
 	if not _aim_overlay.draw.is_connected(_draw_aim_overlay):
@@ -236,8 +241,9 @@ func instantiate_targets() -> void:
 		_targets_root.add_child(new_target)
 		_targets.append(new_target)
 	pass
+#endregion
 
-
+#region Main loop
 # main game loop powering everything
 # process handles the following logic:
 # handle input
@@ -261,7 +267,7 @@ func _process(delta: float) -> void:
 		# camera position: handled by server
 		# _camera.position = _cursor_position
 
-		if missed_asteroids >= 3:
+		if missed_asteroids >= MAX_LIVES:
 			check_game_over()
 
 		# laser animations 
@@ -304,11 +310,16 @@ func _process(delta: float) -> void:
 				laser_sound.stop()
 
 		if _laser_active:
+			if multiplayer.is_server():
+				energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+				sync_energy.rpc(energy)
 			_check_target_hits()
 			_update_laser_line()
 		else:
 			_clear_laser_line()
 			_reset_laser_collision()
+			for target in _targets:
+				_set_target_completed(target, false)
 
 		if multiplayer.is_server() and not _targets.is_empty():
 			_update_asteroid_timer(delta)
@@ -329,6 +340,7 @@ func _process(delta: float) -> void:
 	elif game_state == GameState.Ended:
 		game_end()
 		pass
+#endregion
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -366,6 +378,7 @@ func _leave_non_host_to_main_menu() -> void:
 	queue_free()
 
 
+#region pause
 @rpc("any_peer", "call_local", "reliable")
 func _request_pause_toggle() -> void:
 	if not multiplayer.is_server():
@@ -391,6 +404,7 @@ func _set_pause_state(paused: bool) -> void:
 	queue_redraw()
 	_aim_overlay.queue_redraw()
 
+#endregion
 
 #region gamelogic
 @rpc("authority", "call_local", "reliable")
@@ -482,12 +496,17 @@ func _complete_asteroid() -> void:
 	if multiplayer.is_server():
 		score += 1
 		energy = MAX_ENERGY
+		sync_energy.rpc(energy)
 		_round_flash = 1.0
 
 		_new_asteroid_round()
 
 
 func _miss_asteroid() -> void:
+	if not multiplayer.is_server() or _asteroid_miss_in_progress:
+		return
+	_asteroid_miss_in_progress = true
+
 	_clear_laser_line()
 	# for target in _targets:
 	# 	target.visible = false
@@ -495,7 +514,8 @@ func _miss_asteroid() -> void:
 	sync_end_asteroid_round.rpc()
 
 	# skip the animation if the lose condition is met
-	if missed_asteroids >= 3:
+	if missed_asteroids >= MAX_LIVES:
+		_asteroid_miss_in_progress = false
 		check_game_over()
 		return
 	
@@ -513,6 +533,7 @@ func _miss_asteroid() -> void:
 		energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
 		_round_flash = 1.0
 
+		_asteroid_miss_in_progress = false
 		_new_asteroid_round()
 
 # server only
@@ -855,6 +876,7 @@ func _update_hud() -> void:
 	_timer_label.text = "Asteroid: %.1fs" % asteroid_time_remaining
 	_miss_label.text = "Missed: %d" % missed_asteroids
 	_energy_display.set_energy(energy, MAX_ENERGY)
+	_life_indicator.set_remaining_lives(MAX_LIVES - missed_asteroids)
 
 
 @rpc("any_peer", "call_local")
@@ -924,6 +946,9 @@ func player_disconnected(id):
 	
 	print("Player disconnected: %d" % id)
 
+	if _game_over_transition_started or game_state == GameState.Ended:
+		return
+
 	if not multiplayer.is_server():
 		return
 
@@ -954,7 +979,7 @@ func _get_player_name(player_id: int) -> String:
 # Trigger this function on the server when the lose condition is met
 func check_game_over():
 	# Ensure only the server (Peer ID 1) runs this check
-	if multiplayer.is_server():
+	if multiplayer.is_server() and not _game_over_transition_started:
 		game_state = GameState.Ended
 		set_process(false)
 		set_physics_process(false)
@@ -964,19 +989,75 @@ func check_game_over():
 
 @rpc("authority", "call_local", "reliable")
 func trigger_game_over() -> void:
+	if _game_over_transition_started:
+		return
+
+	_game_over_transition_started = true
+	game_state = GameState.Ended
+	var is_host: bool = multiplayer.is_server()
 	_gameplay_music.stop()
 	# Disable the gameplay camera and scene processing before swapping to the game-over screen.
 	if is_instance_valid(self):
 		_disable_gameplay_cameras(self)
-		process_mode = Node.PROCESS_MODE_DISABLED
+		set_process(false)
+		set_physics_process(false)
+		set_process_input(false)
+		set_process_unhandled_input(false)
 
 		for child in get_children():
 			if child is Node:
 				if child is Sprite2D or child is CanvasLayer:
 					child.visible = false
 				child.process_mode = Node.PROCESS_MODE_DISABLED
+		
+		queue_free()
 
-	get_tree().change_scene_to_file(GAME_OVER_PATH)
+	# Clients stop receiving replication messages before their Level is removed.
+	# The host keeps its peer alive until every responsive client has detached.
+	if not is_host:
+		_close_multiplayer_peer()
+		GameManager.clear_game_state()
+
+	var scene_change_error: int = get_tree().change_scene_to_file(GAME_OVER_PATH)
+	if scene_change_error != OK:
+		push_error("Could not open the game-over scene: %s" % error_string(scene_change_error))
+		return
+
+	if is_host:
+		_finish_host_game_over_cleanup()
+	else:
+		# Gameplay is added directly under SceneTree.root, so changing the current
+		# menu scene does not remove it automatically.
+		queue_free()
+
+
+func _finish_host_game_over_cleanup() -> void:
+	var timeout_at: int = Time.get_ticks_msec() + int(
+		GAME_OVER_DISCONNECT_TIMEOUT_SECONDS * 1000.0
+	)
+
+	while (
+		multiplayer.has_multiplayer_peer()
+		and not multiplayer.get_peers().is_empty()
+		and Time.get_ticks_msec() < timeout_at
+	):
+		await get_tree().create_timer(0.05, true, false, true).timeout
+
+	if not is_instance_valid(self):
+		return
+
+	_close_multiplayer_peer()
+	GameManager.clear_game_state()
+	queue_free()
+
+
+func _close_multiplayer_peer() -> void:
+	var multiplayer_peer: MultiplayerPeer = multiplayer.multiplayer_peer
+	if multiplayer_peer == null or multiplayer_peer is OfflineMultiplayerPeer:
+		return
+
+	multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
 
 func _disable_gameplay_cameras(node: Node) -> void:
 	for child in node.get_children():
@@ -995,11 +1076,6 @@ func _draw() -> void:
 	if _cursor == null:
 		return
 
-	# var screen_size: Vector2 = get_viewport_rect().size
-	# var visible_rect: Rect2 = Rect2(_cursor.position - screen_size * 0.5, screen_size)
-	# draw_rect(visible_rect, Color.BLACK, true)
-	# draw_texture_rect(STAR_BACKGROUND_TEXTURE, visible_rect, false)
-
 
 func _draw_aim_overlay() -> void:
 	if game_state != GameState.Playing:
@@ -1008,7 +1084,7 @@ func _draw_aim_overlay() -> void:
 		return
 
 	_draw_laser()
-	_draw_offscreen_target_bubbles()
+	# _draw_offscreen_target_bubbles()
 	_draw_cursor_box()
 
 func _update_laser_line() -> void:
@@ -1034,16 +1110,6 @@ func _update_laser_line() -> void:
 	if last_point.distance_to(_cursor.position) >= LINE_POINT_MIN_DISTANCE:
 		_current_line.add_point(_cursor.position)
 
-# rendering: handled by clients
-func _draw_grid() -> void:
-	var grid_color: Color = Color(0.12, 0.19, 0.25, 0.28)
-	var start: Vector2 = Vector2(-BACKGROUND_PADDING, -BACKGROUND_PADDING)
-	var end: Vector2 = VIEW_SIZE + Vector2(BACKGROUND_PADDING, BACKGROUND_PADDING)
-
-	for x in range(int(start.x), int(end.x) + 1, 40):
-		draw_line(Vector2(x, start.y), Vector2(x, end.y), grid_color, 1.0)
-	for y in range(int(start.y), int(end.y) + 1, 40):
-		draw_line(Vector2(start.x, y), Vector2(end.x, y), grid_color, 1.0)
 
 # rendering: handled by clients
 func _draw_laser() -> void:
@@ -1164,7 +1230,9 @@ func _is_target_completed_for_display(target: Area2D) -> bool:
 @rpc("authority", "call_local")
 func _update_cockpit_frame() -> void:
 	var my_id: int = multiplayer.get_unique_id()
-	if my_id == GameManager.player2 and my_id != GameManager.player1:
+	var is_player_two: bool = my_id == GameManager.player2 and my_id != GameManager.player1
+	_life_indicator.set_player_two(is_player_two)
+	if is_player_two:
 		_cockpit_frame.texture = PLAYER_2_COCKPIT_TEXTURE
 	else:
 		_cockpit_frame.texture = PLAYER_1_COCKPIT_TEXTURE
@@ -1272,8 +1340,7 @@ func _request_movement(movement: Vector2, delta: float) -> void:
 
 	if next_position == _cursor.position:
 		return
-	
-	energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+
 	_cursor.position = next_position
 	_cursor_position = _cursor.position
 	pass
@@ -1303,6 +1370,11 @@ func sync_laser_active(peer_id: int, active: bool) -> void:
 			break
 
 	_laser_active = any_active
+	_laser_state = active
+
+@rpc("authority", "call_local", "reliable")
+func sync_energy(new_energy: float) -> void:
+	energy = clampf(new_energy, 0.0, MAX_ENERGY)
 #endregion
 
 
