@@ -33,6 +33,9 @@ enum TestingType {
 @onready var usernameText = $MenuCanvas/Username
 
 @onready var notificationLabel = $MenuCanvas/NotificationLabel
+
+@onready var menu_music: AudioStreamPlayer = $SFX/MenuMusic
+@onready var button_press_sfx = $SFX/ButtonPressSFX
 #endregion
 
 # Idle: neither joining nor hosting
@@ -89,9 +92,22 @@ func _fit_menu_to_window() -> void:
 	creditsCanvas.scale = Vector2.ONE * menu_scale
 	creditsCanvas.position = (size - MENU_DESIGN_SIZE * menu_scale) * 0.5
 
+
+func _play_menu_music() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+
+	var intro_stream: AudioStreamMP3 = menu_music.stream as AudioStreamMP3
+	if intro_stream != null:
+		intro_stream.loop = true
+
+	if not menu_music.playing:
+		menu_music.play()
+
 func init_menu():
 	menuCanvas.visible = true
 	creditsCanvas.visible = false
+	_play_menu_music()
 	cancelButton.disabled = true
 	startGameButton.disabled = true
 	hostButton.disabled = false
@@ -129,6 +145,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_cancel_button_button_down() -> void:
+	button_press_sfx.play()
 	label.text = ""
 	state = LobbyState.IDLE
 	cancelButton.disabled = true
@@ -139,11 +156,14 @@ func _on_cancel_button_button_down() -> void:
 
 	close_server()
 
+	label.text = "Disconnected from server and closed any hosted game."
+
 	pass # Replace with function body.
 
 
 func _on_join_button_button_down() -> void:
 	# TODO: check if server is "busy" or full
+	button_press_sfx.play()
 	if usernameText.text == "":
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
@@ -185,10 +205,12 @@ func _on_join_button_button_down() -> void:
 
 	multiplayer.set_multiplayer_peer(peer)
 	print("Joining server...")
+	label.text = "Joined server. Waiting for the game to start!"
 	pass # Replace with function body.
 
 
 func _on_host_button_button_down() -> void:
+	button_press_sfx.play()
 	if usernameText.text == "":
 		print("Please enter a username!")
 		label.text = "Please enter a username!"
@@ -210,6 +232,7 @@ func _on_host_button_button_down() -> void:
 
 
 func _on_start_game_button_button_down() -> void:
+	button_press_sfx.play()
 	# if state != LobbyState.HOSTING:
 	# 	print("You must be hosting to start the game!")
 	# 	label.text = "You must be hosting to start the game!"
@@ -258,7 +281,7 @@ func hostGame():
 	
 	multiplayer.set_multiplayer_peer(peer)
 	print("Waiting for players!")
-
+	label.text = "Game hosted. Waiting for players!"
 	
 	pass
 
@@ -274,6 +297,7 @@ func request_server_to_start():
 @rpc("any_peer", "call_local")
 func startGame():
 	if gameScene:
+		menu_music.stop()
 		for child in get_tree().root.get_children():
 			if child == self:
 				continue
@@ -319,6 +343,17 @@ func SendPlayerData(playerName, id):
 	if multiplayer.is_server():
 		for i in GameManager.Players:
 			SendPlayerData.rpc(GameManager.Players[i].name, i)
+	pass
+
+@rpc("any_peer")
+func ClearPlayerData(playerName, id):
+	if GameManager.Players.has(id):
+		GameManager.Players.erase(id)
+		GameManager.player_ids.erase(id)
+		print("Player ", playerName, " has left the game!")
+		if multiplayer.is_server():
+			for i in GameManager.Players:
+				ClearPlayerData.rpc(GameManager.Players[i].name, i)
 	pass
 
 
@@ -388,4 +423,10 @@ func reject_connection(reason: String) -> void:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 	init_menu()
+
+func disconnect_from_server():
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+		ClearPlayerData.rpc(usernameText.text, multiplayer.get_unique_id())
 #endregion

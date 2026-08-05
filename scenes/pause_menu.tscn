@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://cxqig75brmpn7"]
 
-[ext_resource type="Script" path="res://scripts/pause_menu.gd" id="1_pause"]
+[ext_resource type="Script" uid="uid://c30s2miqtsuna" path="res://scripts/pause_menu.gd" id="1_pause"]
+[ext_resource type="PackedScene" path="res://scenes/volume_control.tscn" id="2_volume"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.035, 0.055, 0.075, 0.96)
@@ -21,13 +22,6 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
-bg_color = Color(0.16, 0.62, 0.82, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
 bg_color = Color(0.08, 0.34, 0.52, 1)
 corner_radius_top_left = 6
@@ -35,11 +29,18 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="PauseMenu" type="CanvasLayer"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.16, 0.62, 0.82, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="PauseMenu" type="CanvasLayer" unique_id=1009642195]
 layer = 100
 script = ExtResource("1_pause")
 
-[node name="Screen" type="Control" parent="."]
+[node name="Screen" type="Control" parent="." unique_id=1380826154]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -47,7 +48,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Dimmer" type="ColorRect" parent="Screen"]
+[node name="Dimmer" type="ColorRect" parent="Screen" unique_id=578286046]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -57,7 +58,7 @@ grow_vertical = 2
 mouse_filter = 1
 color = Color(0, 0, 0, 0.68)
 
-[node name="Center" type="CenterContainer" parent="Screen"]
+[node name="Center" type="CenterContainer" parent="Screen" unique_id=1077378329]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -65,41 +66,134 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="Screen/Center"]
-custom_minimum_size = Vector2(420, 245)
+[node name="Panel" type="PanelContainer" parent="Screen/Center" unique_id=1433986399]
+custom_minimum_size = Vector2(440, 440)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="Screen/Center/Panel"]
+[node name="Margin" type="MarginContainer" parent="Screen/Center/Panel" unique_id=1198342214]
 layout_mode = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_top = 32
 theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 32
 
-[node name="Content" type="VBoxContainer" parent="Screen/Center/Panel/Margin"]
+[node name="Content" type="VBoxContainer" parent="Screen/Center/Panel/Margin" unique_id=896544477]
 layout_mode = 2
 theme_override_constants/separation = 28
 alignment = 1
 
-[node name="Title" type="Label" parent="Screen/Center/Panel/Margin/Content"]
+[node name="Title" type="Label" parent="Screen/Center/Panel/Margin/Content" unique_id=713979121]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.96, 1, 1)
 theme_override_font_sizes/font_size = 48
 text = "PAUSED"
 horizontal_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="Screen/Center/Panel/Margin/Content"]
+[node name="VolumeControl" parent="Screen/Center/Panel/Margin/Content" instance=ExtResource("2_volume")]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="ResumeButton" type="Button" parent="Screen/Center/Panel/Margin/Content" unique_id=2022029399]
 custom_minimum_size = Vector2(240, 68)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
 text = "Resume"
 
+[node name="MainMenuButton" type="Button" parent="Screen/Center/Panel/Margin/Content" unique_id=1455501421]
+custom_minimum_size = Vector2(240, 68)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+text = "Main Menu"
+
+[node name="DisconnectNotice" type="Control" parent="." unique_id=1473217021]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="DisconnectNotice" unique_id=1522843706]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.76)
+
+[node name="Center" type="CenterContainer" parent="DisconnectNotice" unique_id=463534413]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="DisconnectNotice/Center" unique_id=634181813]
+custom_minimum_size = Vector2(680, 230)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="DisconnectNotice/Center/Panel" unique_id=1314181005]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 44
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 44
+theme_override_constants/margin_bottom = 34
+
+[node name="Content" type="VBoxContainer" parent="DisconnectNotice/Center/Panel/Margin" unique_id=1197581736]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="Message" type="Label" parent="DisconnectNotice/Center/Panel/Margin/Content" unique_id=1221384999]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 38
+text = "Player exited the game"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Hint" type="Label" parent="DisconnectNotice/Center/Panel/Margin/Content" unique_id=2095141542]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.82, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+text = "Click anywhere to continue"
+horizontal_alignment = 1
+
+[node name="DismissButton" type="Button" parent="DisconnectNotice" unique_id=1011420004]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+flat = true
+
 [connection signal="pressed" from="Screen/Center/Panel/Margin/Content/ResumeButton" to="." method="_on_resume_button_pressed"]
+[connection signal="pressed" from="Screen/Center/Panel/Margin/Content/MainMenuButton" to="." method="_on_main_menu_button_pressed"]
+[connection signal="pressed" from="DisconnectNotice/DismissButton" to="." method="_on_disconnect_notice_pressed"]
