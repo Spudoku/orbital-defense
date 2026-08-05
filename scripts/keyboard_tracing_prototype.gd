@@ -39,9 +39,11 @@ const CURSOR_SPEED = 520.0
 const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
+const MAX_LIVES = 3
 const ENERGY_DRAIN_PER_SECOND = 20.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
+const GAME_OVER_DISCONNECT_TIMEOUT_SECONDS = 2.0
 
 
 # target-related constants
@@ -107,10 +109,12 @@ var _last_laser_collision_position: Vector2 = Vector2.ZERO
 var _has_last_laser_collision_position: bool = false
 var _asteroid_visual_initialized: bool = false
 var _last_asteroid_variant: int = -1
+var _asteroid_miss_in_progress: bool = false
 
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
 var _player_names_by_id: Dictionary = {}
+var _game_over_transition_started: bool = false
 var _cockpit_mask_texture: Texture2D
 var _cockpit_mask_image: Image
 var children: Array[Node] = [] # this is to store the children of the cursor node
@@ -134,6 +138,7 @@ var game_state: GameState = GameState.Playing
 @onready var _timer_label: Label = $HUD/TimerLabel
 @onready var _miss_label: Label = $HUD/MissLabel
 @onready var _energy_display: EnergyDisplay = $HUD/EnergyDisplay
+@onready var _life_indicator: LifeIndicator = $HUD/LifeIndicator
 @onready var _cockpit_frame: TextureRect = $HUD/CockpitFrame
 @onready var clientLabel: Label = $HUD/ClientLabel
 @onready var _pause_menu: PauseMenu = $PauseMenu
@@ -260,7 +265,7 @@ func _process(delta: float) -> void:
 		# camera position: handled by server
 		# _camera.position = _cursor_position
 
-		if missed_asteroids >= 3:
+		if missed_asteroids >= MAX_LIVES:
 			check_game_over()
 
 		# laser animations 
@@ -471,6 +476,10 @@ func _complete_asteroid() -> void:
 
 
 func _miss_asteroid() -> void:
+	if not multiplayer.is_server() or _asteroid_miss_in_progress:
+		return
+	_asteroid_miss_in_progress = true
+
 	_clear_laser_line()
 	# for target in _targets:
 	# 	target.visible = false
@@ -478,7 +487,8 @@ func _miss_asteroid() -> void:
 	sync_end_asteroid_round.rpc()
 
 	# skip the animation if the lose condition is met
-	if missed_asteroids >= 3:
+	if missed_asteroids >= MAX_LIVES:
+		_asteroid_miss_in_progress = false
 		check_game_over()
 		return
 	
@@ -495,6 +505,7 @@ func _miss_asteroid() -> void:
 		energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
 		_round_flash = 1.0
 
+		_asteroid_miss_in_progress = false
 		_new_asteroid_round()
 
 # server only
@@ -831,6 +842,7 @@ func _update_hud() -> void:
 	_timer_label.text = "Asteroid: %.1fs" % asteroid_time_remaining
 	_miss_label.text = "Missed: %d" % missed_asteroids
 	_energy_display.set_energy(energy, MAX_ENERGY)
+	_life_indicator.set_remaining_lives(MAX_LIVES - missed_asteroids)
 
 
 @rpc("any_peer", "call_local")
@@ -899,6 +911,9 @@ func player_disconnected(id):
 	GameManager._active_laser_peers.erase(id)
 	print("Player disconnected: %d" % id)
 
+	if _game_over_transition_started or game_state == GameState.Ended:
+		return
+
 	if not multiplayer.is_server():
 		return
 
@@ -929,7 +944,7 @@ func _get_player_name(player_id: int) -> String:
 # Trigger this function on the server when the lose condition is met
 func check_game_over():
 	# Ensure only the server (Peer ID 1) runs this check
-	if multiplayer.is_server():
+	if multiplayer.is_server() and not _game_over_transition_started:
 		game_state = GameState.Ended
 		set_process(false)
 		set_physics_process(false)
@@ -939,11 +954,20 @@ func check_game_over():
 
 @rpc("authority", "call_local", "reliable")
 func trigger_game_over() -> void:
+	if _game_over_transition_started:
+		return
+
+	_game_over_transition_started = true
+	game_state = GameState.Ended
+	var is_host: bool = multiplayer.is_server()
 	_gameplay_music.stop()
 	# Disable the gameplay camera and scene processing before swapping to the game-over screen.
 	if is_instance_valid(self):
 		_disable_gameplay_cameras(self)
-		process_mode = Node.PROCESS_MODE_DISABLED
+		set_process(false)
+		set_physics_process(false)
+		set_process_input(false)
+		set_process_unhandled_input(false)
 
 		for child in get_children():
 			if child is Node:
@@ -951,7 +975,52 @@ func trigger_game_over() -> void:
 					child.visible = false
 				child.process_mode = Node.PROCESS_MODE_DISABLED
 
-	get_tree().change_scene_to_file(GAME_OVER_PATH)
+	# Clients stop receiving replication messages before their Level is removed.
+	# The host keeps its peer alive until every responsive client has detached.
+	if not is_host:
+		_close_multiplayer_peer()
+		GameManager.clear_game_state()
+
+	var scene_change_error: int = get_tree().change_scene_to_file(GAME_OVER_PATH)
+	if scene_change_error != OK:
+		push_error("Could not open the game-over scene: %s" % error_string(scene_change_error))
+		return
+
+	if is_host:
+		_finish_host_game_over_cleanup()
+	else:
+		# Gameplay is added directly under SceneTree.root, so changing the current
+		# menu scene does not remove it automatically.
+		queue_free()
+
+
+func _finish_host_game_over_cleanup() -> void:
+	var timeout_at: int = Time.get_ticks_msec() + int(
+		GAME_OVER_DISCONNECT_TIMEOUT_SECONDS * 1000.0
+	)
+
+	while (
+		multiplayer.has_multiplayer_peer()
+		and not multiplayer.get_peers().is_empty()
+		and Time.get_ticks_msec() < timeout_at
+	):
+		await get_tree().create_timer(0.05, true, false, true).timeout
+
+	if not is_instance_valid(self):
+		return
+
+	_close_multiplayer_peer()
+	GameManager.clear_game_state()
+	queue_free()
+
+
+func _close_multiplayer_peer() -> void:
+	var multiplayer_peer: MultiplayerPeer = multiplayer.multiplayer_peer
+	if multiplayer_peer == null or multiplayer_peer is OfflineMultiplayerPeer:
+		return
+
+	multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
 
 func _disable_gameplay_cameras(node: Node) -> void:
 	for child in node.get_children():
@@ -1139,7 +1208,9 @@ func _is_target_completed_for_display(target: Area2D) -> bool:
 @rpc("authority", "call_local")
 func _update_cockpit_frame() -> void:
 	var my_id: int = multiplayer.get_unique_id()
-	if my_id == GameManager.player2 and my_id != GameManager.player1:
+	var is_player_two: bool = my_id == GameManager.player2 and my_id != GameManager.player1
+	_life_indicator.set_player_two(is_player_two)
+	if is_player_two:
 		_cockpit_frame.texture = PLAYER_2_COCKPIT_TEXTURE
 	else:
 		_cockpit_frame.texture = PLAYER_1_COCKPIT_TEXTURE
