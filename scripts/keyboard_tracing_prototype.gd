@@ -576,7 +576,11 @@ func _randomize_asteroid() -> void:
 		randf_range(minimum_position.y, maximum_position.y)
 	)
 
-	
+	_asteroid_animation.position = asteroid_position
+	_asteroid_animation.scale = Vector2.ONE * scale_factor * 2
+	_asteroid_animation.visible = true
+	_asteroid_animation.play(asteroid_anim_name)
+
 	_asteroid_visual_initialized = true
 	_last_asteroid_variant = asteroid_variant
 	_last_asteroid_position = asteroid_position
@@ -692,61 +696,33 @@ func _randomize_target_visuals() -> void:
 
 func _build_asteroid_target_candidates() -> Array[Vector2]:
 	var candidates: Array[Vector2] = []
-	# var image: Image = _asteroid.texture.get_image()
+	var asteroid_width_px: float = 600.0
+	var asteroid_height_px: float = 400.0
+	var asteroid_scale: float = maxf(absf(scale_factor), 0.001)
+	var asteroid_center_global: Vector2 = _asteroid_animation.global_position
+	var half_width: float = asteroid_width_px * 0.5 * asteroid_scale
+	var half_height: float = asteroid_height_px * 0.5 * asteroid_scale
+	var sample_count: int = 96
 
-	# animation
+	for sample_index in range(sample_count):
+		var angle: float = TAU * float(sample_index) / float(sample_count)
+		var radius_ratio: float = randf_range(0.2, 1.0)
+		var local_position: Vector2 = Vector2(
+			cos(angle) * half_width * radius_ratio,
+			sin(angle) * half_height * radius_ratio
+		)
 
-	var cur_sprite_frames = _asteroid_animation.sprite_frames
-	
-	asteroid_anim_name = ASTEROID_FLYIN_ANIMATIONS[asteroid_variant]
-	print("using animation " + str(asteroid_anim_name))
-	var frame_count = cur_sprite_frames.get_frame_count(asteroid_anim_name)
-	var image = cur_sprite_frames.get_frame_texture(asteroid_anim_name, frame_count - 1).get_image()
+		var candidate_position: Vector2 = asteroid_center_global + local_position
+		var distance_to_center: float = candidate_position.distance_to(asteroid_center_global)
+		var max_allowed_distance: float = minf(half_width, half_height) * 0.92
+		if distance_to_center > max_allowed_distance:
+			continue
 
-	if image == null or image.is_empty():
-		return candidates
-
-	var asteroid_scale: float = maxf(absf(_asteroid_animation.scale.x), 0.001)
-	var radius_in_pixels: float = TARGET_PLACEMENT_RADIUS / asteroid_scale
-	var scan_step: int = maxi(8, floori(radius_in_pixels * 0.7))
-	var scan_margin: int = ceili(radius_in_pixels)
-	var image_size: Vector2 = Vector2(image.get_width(), image.get_height())
-
-	for y in range(scan_margin, image.get_height() - scan_margin, scan_step):
-		for x in range(scan_margin, image.get_width() - scan_margin, scan_step):
-			var pixel_position: Vector2 = Vector2(x, y)
-			if not _is_opaque_target_area(image, pixel_position, radius_in_pixels):
-				continue
-
-			var asteroid_local_position: Vector2 = pixel_position - image_size * 0.5
-			candidates.append(_asteroid_animation.to_global(asteroid_local_position))
+		candidates.append(candidate_position)
 
 	candidates.shuffle()
 	print("found %d candidates", candidates.size())
 	return candidates
-
-
-func _is_opaque_target_area(image: Image, center: Vector2, radius: float) -> bool:
-	if not _is_opaque_asteroid_pixel(image, center):
-		return false
-
-	for radius_ratio in [0.45, 0.75, 1.0]:
-		for sample_index in range(TARGET_ALPHA_SAMPLE_COUNT):
-			var angle: float = TAU * float(sample_index) / float(TARGET_ALPHA_SAMPLE_COUNT)
-			var sample_position: Vector2 = center + Vector2.from_angle(angle) * radius * radius_ratio
-			if not _is_opaque_asteroid_pixel(image, sample_position):
-				return false
-
-	return true
-
-
-func _is_opaque_asteroid_pixel(image: Image, pixel_position: Vector2) -> bool:
-	var pixel_x: int = roundi(pixel_position.x)
-	var pixel_y: int = roundi(pixel_position.y)
-	if pixel_x < 0 or pixel_y < 0 or pixel_x >= image.get_width() or pixel_y >= image.get_height():
-		return false
-
-	return image.get_pixel(pixel_x, pixel_y).a >= TARGET_ALPHA_THRESHOLD
 
 # server only
 func _is_position_clear(candidate: Vector2, placed_positions: Array[Vector2]) -> bool:
