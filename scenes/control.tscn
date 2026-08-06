@@ -15,7 +15,7 @@
 [ext_resource type="Texture2D" uid="uid://rfs731tvm6b3" path="res://assets/Cancel.png" id="13_0jf8d"]
 [ext_resource type="Texture2D" uid="uid://dfln45e201chc" path="res://assets/menu_cancel_pressed.png" id="13_cancel_pressed"]
 [ext_resource type="Texture2D" uid="uid://dvx556j36w34k" path="res://assets/credits_page.png" id="14_credits_page"]
-[ext_resource type="AudioStream" path="res://SFX/Atlas_Arena_Intro.mp3" id="15_music"]
+[ext_resource type="AudioStream" uid="uid://cog3abfxkprbq" path="res://SFX/Atlas_Arena_Intro.mp3" id="15_music"]
 [ext_resource type="PackedScene" path="res://scenes/volume_control.tscn" id="16_volume"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_clear"]
@@ -29,7 +29,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_sjmnu")
-testingType = 1
 gameScene = ExtResource("2_r67kn")
 
 [node name="MenuCanvas" type="Control" parent="." unique_id=383016681]
@@ -165,7 +164,7 @@ mouse_default_cursor_shape = 2
 texture_normal = ExtResource("13_0jf8d")
 texture_pressed = ExtResource("13_cancel_pressed")
 
-[node name="VolumeControl" parent="MenuCanvas" instance=ExtResource("16_volume")]
+[node name="VolumeControl" parent="MenuCanvas" unique_id=629613512 instance=ExtResource("16_volume")]
 layout_mode = 0
 offset_left = 1538.0
 offset_top = 964.0
