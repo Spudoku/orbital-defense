@@ -40,7 +40,7 @@ const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
 const MAX_LIVES = 3
-const ENERGY_DRAIN_PER_SECOND = 20.0
+const ENERGY_DRAIN_PER_SECOND = 10.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 const GAME_OVER_DISCONNECT_TIMEOUT_SECONDS = 2.0
@@ -989,8 +989,6 @@ func trigger_game_over() -> void:
 				if child is Sprite2D or child is CanvasLayer:
 					child.visible = false
 				child.process_mode = Node.PROCESS_MODE_DISABLED
-		
-		queue_free()
 
 	# Clients stop receiving replication messages before their Level is removed.
 	# The host keeps its peer alive until every responsive client has detached.
