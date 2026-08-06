@@ -23,7 +23,7 @@
 [ext_resource type="AudioStream" uid="uid://becjdxx8qu25s" path="res://SFX/ingame/explosions/760509__samsterbirdies__astronomical-explosion.ogg" id="14_he78u"]
 [ext_resource type="Texture2D" uid="uid://bcg0sr043i2na" path="res://assets/Asteroids Assets/AnimsBrown/brown4_debris_sheet.png" id="14_q5ayb"]
 [ext_resource type="AudioStream" uid="uid://2yuj2y2lghx8" path="res://SFX/Atlas_Arena_Theme.mp3" id="15_gameplay_music"]
-[ext_resource type="PackedScene" path="res://scenes/life_indicator.tscn" id="16_lives"]
+[ext_resource type="PackedScene" uid="uid://c1w04x587yr6b" path="res://scenes/life_indicator.tscn" id="16_lives"]
 [ext_resource type="AudioStream" uid="uid://biilec4jos2mq" path="res://SFX/ingame/733994__velcronator__laser-01.wav" id="22_jgb5m"]
 [ext_resource type="AudioStream" uid="uid://b11fpg07an4ae" path="res://SFX/ingame/271397__gado77__normal-hitnormal.wav" id="23_3a13l"]
 
@@ -3112,8 +3112,8 @@ script = ExtResource("1_shared")
 
 [node name="Background" type="Sprite2D" parent="." unique_id=1970710660]
 z_index = -5
-position = Vector2(1505, -158.9375)
-scale = Vector2(3.5024974, 2.7767444)
+position = Vector2(941.5, -158.9375)
+scale = Vector2(2.9395604, 2.7767444)
 texture = ExtResource("2_5xpsm")
 
 [node name="Asteroid" type="Sprite2D" parent="." unique_id=413107605]

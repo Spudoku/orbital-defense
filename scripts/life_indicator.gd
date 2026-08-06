@@ -2,6 +2,7 @@ extends Control
 class_name LifeIndicator
 
 const MAX_LIVES: int = 3
+const X_HEALTH_TEXTURE = preload("res://assets/hud/life/Health_X.png")
 
 @export var player_1_backdrop: Texture2D
 @export var player_2_backdrop: Texture2D
@@ -20,7 +21,8 @@ func _ready() -> void:
 func set_remaining_lives(remaining_lives: int) -> void:
 	_remaining_lives = clampi(remaining_lives, 0, MAX_LIVES)
 	for icon_index in range(_life_icons.size()):
-		_life_icons[icon_index].visible = icon_index < _remaining_lives
+		if icon_index >= _remaining_lives:
+			_life_icons[icon_index].texture = X_HEALTH_TEXTURE
 
 
 func set_player_two(is_player_two: bool) -> void:
