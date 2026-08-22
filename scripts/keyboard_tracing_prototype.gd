@@ -501,7 +501,7 @@ func _complete_asteroid() -> void:
 
 		_new_asteroid_round()
 
-
+@rpc("authority", "call_local", "reliable")
 func _miss_asteroid() -> void:
 	if not multiplayer.is_server() or _asteroid_miss_in_progress:
 		return
@@ -512,6 +512,14 @@ func _miss_asteroid() -> void:
 	# 	target.visible = false
 	# set_process(false)
 	sync_end_asteroid_round.rpc()
+
+	if multiplayer.is_server():
+		missed_asteroids += 1
+		score = maxi(0, score - 1)
+	
+	# should 
+	
+	sync_missed_asteroid_hud.rpc(missed_asteroids, score)
 
 	# skip the animation if the lose condition is met
 	if missed_asteroids >= MAX_LIVES:
@@ -528,13 +536,19 @@ func _miss_asteroid() -> void:
 	# set_process(true)
 	
 	if multiplayer.is_server():
-		missed_asteroids += 1
-		score = maxi(0, score - 1)
+		# missed_asteroids += 1
+		# score = maxi(0, score - 1)
 		energy = MAX_ENERGY - ASTEROID_MISS_ENERGY_PENALTY
 		_round_flash = 1.0
 
 		_asteroid_miss_in_progress = false
 		_new_asteroid_round()
+
+@rpc("authority", "call_local", "reliable")
+func sync_missed_asteroid_hud(new_missed_count: int, new_score: int) -> void:
+	missed_asteroids = new_missed_count
+	score = new_score
+	_update_hud()
 
 # server only
 func _randomize_asteroid() -> void:
@@ -1265,7 +1279,7 @@ func _move_cursor(delta: float) -> void:
 
 	if movement == Vector2.ZERO or energy <= 0.0:
 		if energy <= 0.0:
-			_miss_asteroid()
+			_miss_asteroid.rpc()
 		return
 
 	

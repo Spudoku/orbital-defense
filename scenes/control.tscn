@@ -29,6 +29,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_sjmnu")
+testingType = 1
 gameScene = ExtResource("2_r67kn")
 
 [node name="MenuCanvas" type="Control" parent="." unique_id=383016681]
