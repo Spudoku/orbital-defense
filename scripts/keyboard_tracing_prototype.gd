@@ -40,7 +40,6 @@ const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
 const MAX_LIVES = 3
-const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 const GAME_OVER_DISCONNECT_TIMEOUT_SECONDS = 2.0
 
@@ -80,12 +79,15 @@ enum GameState {
 }
 #endregion
 
+var energy_drain_per_second = 10.0
+var asteroid_time_limit = 20.0
+
 var _cursor: Node2D
 @export var _cursor_position: Vector2
 @export var score: int = 0
 @export var energy: float = MAX_ENERGY
 @export var completed_targets: int = 0
-@export var asteroid_time_remaining: float = ASTEROID_TIME_LIMIT
+@export var asteroid_time_remaining: float = asteroid_time_limit
 @export var missed_asteroids: int = 0
 
 
@@ -109,8 +111,6 @@ var _has_last_laser_collision_position: bool = false
 var _asteroid_visual_initialized: bool = false
 var _last_asteroid_variant: int = -1
 var _asteroid_miss_in_progress: bool = false
-
-var energy_drain_per_second = 10.0;
 
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
@@ -443,7 +443,15 @@ func _reset_targets() -> void:
 	_randomize_target_positions()
 	_randomize_target_visuals()
 	completed_targets = 0
-	asteroid_time_remaining = ASTEROID_TIME_LIMIT
+	# reduce time each round
+	if asteroid_time_limit > 12.0:
+		asteroid_time_limit = asteroid_time_limit - 2
+	asteroid_time_remaining = asteroid_time_limit
+
+	# increase energy drain per second each round till max of 26 per second
+	if energy_drain_per_second < 26.0:
+		energy_drain_per_second = energy_drain_per_second + 2;
+
 	_reset_laser_collision()
 	for target in _targets:
 		_set_target_completed(target, false)
@@ -588,10 +596,6 @@ func _randomize_asteroid() -> void:
 	_last_asteroid_width = asteroid_width
 
 	synced_asteroid_flyin.rpc(next_variant, asteroid_position, asteroid_width)
-
-	# increase energy drain per second each round till max of 26 per second
-	if energy_drain_per_second < 26.0:
-		energy_drain_per_second = energy_drain_per_second + 2;
 
 
 @rpc("authority", "call_local", "reliable")
