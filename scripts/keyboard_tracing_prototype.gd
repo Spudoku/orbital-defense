@@ -40,7 +40,6 @@ const LASER_RADIUS = 30.0
 const LINE_POINT_MIN_DISTANCE = 4.0
 const MAX_ENERGY = 100.0
 const MAX_LIVES = 3
-const ENERGY_DRAIN_PER_SECOND = 10.0
 const ASTEROID_TIME_LIMIT = 20.0
 const ASTEROID_MISS_ENERGY_PENALTY = 25.0
 const GAME_OVER_DISCONNECT_TIMEOUT_SECONDS = 2.0
@@ -110,6 +109,8 @@ var _has_last_laser_collision_position: bool = false
 var _asteroid_visual_initialized: bool = false
 var _last_asteroid_variant: int = -1
 var _asteroid_miss_in_progress: bool = false
+
+var energy_drain_per_second = 10.0;
 
 var _last_asteroid_position: Vector2 = Vector2.ZERO
 var _last_asteroid_width: float = 0.0
@@ -311,7 +312,7 @@ func _process(delta: float) -> void:
 
 		if _laser_active:
 			if multiplayer.is_server():
-				energy = maxf(0.0, energy - ENERGY_DRAIN_PER_SECOND * delta)
+				energy = maxf(0.0, energy - energy_drain_per_second * delta)
 				sync_energy.rpc(energy)
 			_check_target_hits()
 			_update_laser_line()
@@ -587,6 +588,10 @@ func _randomize_asteroid() -> void:
 	_last_asteroid_width = asteroid_width
 
 	synced_asteroid_flyin.rpc(next_variant, asteroid_position, asteroid_width)
+
+	# increase energy drain per second each round till max of 26 per second
+	if energy_drain_per_second < 26.0:
+		energy_drain_per_second = energy_drain_per_second + 2;
 
 
 @rpc("authority", "call_local", "reliable")
